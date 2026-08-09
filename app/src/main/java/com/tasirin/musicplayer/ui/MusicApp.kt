@@ -22,6 +22,7 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -48,6 +49,7 @@ fun MusicApp(vm: LibraryViewModel = viewModel()) {
     }
 
     var tab by rememberSaveable { mutableStateOf(0) }
+    var albumOpen by rememberSaveable { mutableStateOf(false) }
     val hasPermission = remember { mutableStateOf(hasAudioPermission(context)) }
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
@@ -65,7 +67,7 @@ fun MusicApp(vm: LibraryViewModel = viewModel()) {
                     NavigationBar(containerColor = MaterialTheme.colorScheme.surface) {
                         NavigationBarItem(
                             selected = tab == 0,
-                            onClick = { tab = 0 },
+                            onClick = { tab = 0; albumOpen = false },
                             icon = { Icon(Icons.Filled.LibraryMusic, contentDescription = null) },
                             label = { Text("Perpustakaan") }
                         )
@@ -94,7 +96,22 @@ fun MusicApp(vm: LibraryViewModel = viewModel()) {
                             tab = 1
                         }
                     )
-                    1 -> NowPlayingScreen()
+                    1 -> {
+                        val current by PlayerController.currentTrack.collectAsState()
+                        if (albumOpen && current != null) {
+                            AlbumScreen(
+                                vm = vm,
+                                album = current.album,
+                                artist = current.artist,
+                                onBack = { albumOpen = false },
+                                onPlay = { list, i ->
+                                    PlayerController.play(list, i)
+                                }
+                            )
+                        } else {
+                            NowPlayingScreen(onOpenAlbum = { albumOpen = true })
+                        }
+                    }
                     else -> SettingsScreen(
                         vm = vm,
                         themeMode = themeMode,

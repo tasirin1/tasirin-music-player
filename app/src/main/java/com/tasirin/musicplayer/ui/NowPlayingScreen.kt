@@ -20,6 +20,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
@@ -31,6 +32,7 @@ import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -40,6 +42,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -58,9 +61,9 @@ import com.tasirin.musicplayer.Track
 import com.tasirin.musicplayer.ui.components.Artwork
 import com.tasirin.musicplayer.ui.theme.Accent
 
-/** Layar "Sekarang Diputar" — sampul besar, kontrol, dan daftar selanjutnya. */
+/** Layar "Sekarang Diputar" — sampul besar (ketuk → lirik), kontrol, tombol album. */
 @Composable
-fun NowPlayingScreen() {
+fun NowPlayingScreen(onOpenAlbum: () -> Unit) {
     val track by PlayerController.currentTrack.collectAsState()
     val playing by PlayerController.playing.collectAsState()
     val pos by PlayerController.positionMs.collectAsState()
@@ -72,6 +75,7 @@ fun NowPlayingScreen() {
     val path = track?.path
     val art by produceState<Bitmap?>(null, path) { value = path?.let { ArtCache.load(it) } }
     var dragPos by remember { mutableStateOf<Float?>(null) }
+    var showLyrics by rememberSaveable { mutableStateOf(false) }
 
     val bg = MaterialTheme.colorScheme.background
     val surfaceVariant = MaterialTheme.colorScheme.surfaceVariant
@@ -121,21 +125,37 @@ fun NowPlayingScreen() {
             Spacer(Modifier.height(28.dp))
 
             Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                Surface(
-                    shape = RoundedCornerShape(24.dp),
-                    color = surfaceVariant,
-                    shadowElevation = 28.dp,
-                    modifier = Modifier.size(300.dp)
-                ) {
-                    art?.let {
-                        Image(it.asImageBitmap(), null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
-                    } ?: Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Icon(
-                            Icons.Filled.MusicNote, null,
-                            tint = secondary, modifier = Modifier.size(96.dp)
-                        )
+                if (showLyrics) {
+                    LyricsCard(current.lyrics, secondary, surfaceVariant, onClose = { showLyrics = false })
+                } else {
+                    Surface(
+                        shape = RoundedCornerShape(24.dp),
+                        color = surfaceVariant,
+                        shadowElevation = 28.dp,
+                        modifier = Modifier
+                            .size(300.dp)
+                            .clickable { showLyrics = true }
+                    ) {
+                        art?.let {
+                            Image(it.asImageBitmap(), null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+                        } ?: Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            Icon(
+                                Icons.Filled.MusicNote, null,
+                                tint = secondary, modifier = Modifier.size(96.dp)
+                            )
+                        }
                     }
                 }
+            }
+            if (!showLyrics && current.lyrics.isNotBlank()) {
+                Spacer(Modifier.height(10.dp))
+                Text(
+                    "Ketuk sampul untuk lirik",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = secondary,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
 
             Spacer(Modifier.height(28.dp))
@@ -168,6 +188,13 @@ fun NowPlayingScreen() {
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.fillMaxWidth()
                 )
+                Spacer(Modifier.height(12.dp))
+                OutlinedButton(
+                    onClick = onOpenAlbum,
+                    modifier = Modifier.align(Alignment.CenterHorizontally)
+                ) {
+                    Text("Lihat album")
+                }
             }
 
             Spacer(Modifier.height(24.dp))
@@ -315,6 +342,52 @@ private fun EmptyNowPlaying() {
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+        }
+    }
+}
+
+
+@Composable
+private fun LyricsCard(
+    lyrics: String,
+    secondary: Color,
+    surfaceVariant: Color,
+    onClose: () -> Unit
+) {
+    Surface(
+        shape = RoundedCornerShape(24.dp),
+        color = surfaceVariant,
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(300.dp)
+    ) {
+        Column(Modifier.padding(16.dp)) {
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("Lirik", style = MaterialTheme.typography.titleMedium)
+                IconButton(onClick = onClose) {
+                    Icon(Icons.Filled.Close, "Tutup", tint = secondary)
+                }
+            }
+            if (lyrics.isBlank()) {
+                Text(
+                    "Tidak ada lirik tertanam di file ini",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = secondary
+                )
+            } else {
+                Text(
+                    lyrics,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier
+                        .weight(1f)
+                        .verticalScroll(rememberScrollState())
+                )
+            }
         }
     }
 }
