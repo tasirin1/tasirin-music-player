@@ -1,6 +1,12 @@
 package com.tasirin.musicplayer.ui
 
 import android.graphics.Bitmap
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -15,11 +21,14 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
@@ -60,6 +69,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.tasirin.musicplayer.ArtCache
+import com.tasirin.musicplayer.FavoritesStore
 import com.tasirin.musicplayer.LyricsLoader
 import com.tasirin.musicplayer.PlayerController
 import com.tasirin.musicplayer.Track
@@ -75,6 +85,7 @@ fun NowPlayingScreen() {
     val shuffle by PlayerController.shuffle.collectAsState()
     val repeat by PlayerController.repeat.collectAsState()
     val queue by PlayerController.queue.collectAsState()
+    val favPaths by FavoritesStore.paths.collectAsState()
 
     val path = track?.path
     val art by produceState<Bitmap?>(null, path) { value = path?.let { ArtCache.load(it) } }
@@ -105,6 +116,7 @@ fun NowPlayingScreen() {
     }
 
     val artColor = remember(art) { art?.let { averageColor(it) } }
+    val accent = artColor ?: Accent
     val shownPos = dragPos ?: pos.toFloat()
     val maxPos = dur.coerceAtLeast(1L).toFloat()
     val qIndex = queue.indexOfFirst { it.path == current.path }
@@ -133,13 +145,31 @@ fun NowPlayingScreen() {
 
         Column(Modifier.fillMaxSize().padding(horizontal = 24.dp)) {
             Spacer(Modifier.height(12.dp))
-            Text(
-                "Sekarang Diputar",
-                style = MaterialTheme.typography.titleMedium,
-                color = secondary,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth()
-            )
+            Row(
+                Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Spacer(Modifier.width(48.dp))
+                Text(
+                    "Sekarang Diputar",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = secondary,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.weight(1f)
+                )
+                val isFav = current.path in favPaths
+                IconButton(
+                    onClick = { FavoritesStore.toggle(current.path) },
+                    modifier = Modifier.size(44.dp)
+                ) {
+                    Icon(
+                        if (isFav) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                        if (isFav) "Hapus dari favorit" else "Tambah ke favorit",
+                        tint = if (isFav) accent else secondary,
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
+            }
 
             // Sampul responsif + glow
             Box(
@@ -155,45 +185,57 @@ fun NowPlayingScreen() {
                         .aspectRatio(1f),
                     contentAlignment = Alignment.Center
                 ) {
-                    if (showLyrics) {
-                        LyricsCard(
-                            lyrics = lyricsText,
-                            loading = lyricsLoading,
-                            positionMs = pos,
-                            onRetry = { lyricsAttempt++ },
-                            onClose = { showLyrics = false },
-                            surfaceVariant = surfaceVariant
-                        )
-                    } else {
-                        Box(
-                            Modifier
-                                .fillMaxSize()
-                                .scale(1.1f)
-                                .background(
-                                    Brush.radialGradient(
-                                        listOf(
-                                            artColor?.copy(alpha = 0.3f) ?: Color.Transparent,
-                                            Color.Transparent
-                                        )
-                                    ),
-                                    shape = RoundedCornerShape(28.dp)
-                                )
-                        )
-                        Surface(
-                            shape = RoundedCornerShape(24.dp),
-                            color = surfaceVariant,
-                            shadowElevation = 28.dp,
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .clickable { showLyrics = true }
-                        ) {
-                            art?.let {
-                                Image(it.asImageBitmap(), null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
-                            } ?: Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                Icon(
-                                    Icons.Filled.MusicNote, null,
-                                    tint = secondary, modifier = Modifier.size(96.dp)
-                                )
+                    Crossfade(
+                        targetState = showLyrics,
+                        animationSpec = tween(220),
+                        label = "cover",
+                        modifier = Modifier.fillMaxSize()
+                    ) { showL ->
+                        if (showL) {
+                            LyricsCard(
+                                lyrics = lyricsText,
+                                loading = lyricsLoading,
+                                positionMs = pos,
+                                onRetry = { lyricsAttempt++ },
+                                onClose = { showLyrics = false },
+                                accent = accent,
+                                surfaceVariant = surfaceVariant
+                            )
+                        } else {
+                            Box(
+                                Modifier
+                                    .fillMaxSize()
+                                    .scale(1.1f)
+                                    .background(
+                                        Brush.radialGradient(
+                                            listOf(
+                                                artColor?.copy(alpha = 0.3f) ?: Color.Transparent,
+                                                Color.Transparent
+                                            )
+                                        ),
+                                        shape = RoundedCornerShape(28.dp)
+                                    )
+                            )
+                            Surface(
+                                shape = RoundedCornerShape(24.dp),
+                                color = surfaceVariant,
+                                shadowElevation = 28.dp,
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .clickable { showLyrics = true }
+                            ) {
+                                art?.let {
+                                    Image(
+                                        it.asImageBitmap(), null,
+                                        Modifier.fillMaxSize(),
+                                        contentScale = ContentScale.Crop
+                                    )
+                                } ?: Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        Icons.Filled.MusicNote, null,
+                                        tint = secondary, modifier = Modifier.size(96.dp)
+                                    )
+                                }
                             }
                         }
                     }
@@ -270,8 +312,8 @@ fun NowPlayingScreen() {
                 },
                 valueRange = 0f..maxPos,
                 colors = SliderDefaults.colors(
-                    thumbColor = Accent,
-                    activeTrackColor = Accent,
+                    thumbColor = accent,
+                    activeTrackColor = accent,
                     inactiveTrackColor = surfaceVariant
                 )
             )
@@ -298,7 +340,7 @@ fun NowPlayingScreen() {
                 IconButton(onClick = { PlayerController.setShuffle(!shuffle) }) {
                     Icon(
                         Icons.Filled.Shuffle, "Acak",
-                        tint = if (shuffle) Accent else secondary
+                        tint = if (shuffle) accent else secondary
                     )
                 }
                 IconButton(onClick = {
@@ -313,7 +355,7 @@ fun NowPlayingScreen() {
                     Icon(
                         if (repeat == PlayerController.RepeatMode.ONE) Icons.Filled.RepeatOne else Icons.Filled.Repeat,
                         "Ulang",
-                        tint = if (repeat != PlayerController.RepeatMode.OFF) Accent else secondary
+                        tint = if (repeat != PlayerController.RepeatMode.OFF) accent else secondary
                     )
                 }
             }
@@ -332,7 +374,7 @@ fun NowPlayingScreen() {
                 }
                 Surface(
                     shape = CircleShape,
-                    color = Accent,
+                    color = accent,
                     shadowElevation = 12.dp,
                     modifier = Modifier
                         .size(72.dp)
@@ -390,6 +432,7 @@ private fun LyricsCard(
     positionMs: Long,
     onRetry: () -> Unit,
     onClose: () -> Unit,
+    accent: Color,
     surfaceVariant: Color
 ) {
     Surface(
@@ -435,7 +478,7 @@ private fun LyricsCard(
                             .padding(horizontal = 12.dp, vertical = 16.dp)
                     )
                 } else {
-                    ThreeLineLyrics(lines, positionMs, Modifier.fillMaxSize())
+                    ThreeLineLyrics(lines, positionMs, accent, Modifier.fillMaxSize())
                 }
             }
         }
@@ -444,7 +487,12 @@ private fun LyricsCard(
 
 /** Tiga baris lirik: baris sebelumnya, baris aktif (tengah), baris berikutnya. */
 @Composable
-private fun ThreeLineLyrics(lines: List<LyricLine>, positionMs: Long, modifier: Modifier) {
+private fun ThreeLineLyrics(
+    lines: List<LyricLine>,
+    positionMs: Long,
+    accent: Color,
+    modifier: Modifier
+) {
     val index = remember(lines, positionMs) { currentLineIndex(lines, positionMs) }
     Column(
         modifier,
@@ -453,22 +501,28 @@ private fun ThreeLineLyrics(lines: List<LyricLine>, positionMs: Long, modifier: 
     ) {
         listOf(index - 1, index, index + 1).forEachIndexed { i, li ->
             val line = lines.getOrNull(li)
-            Text(
-                line?.text ?: "",
-                style = if (i == 1) {
-                    MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold)
-                } else {
-                    MaterialTheme.typography.bodyLarge
-                },
-                color = if (i == 1) Accent else MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 4.dp)
-                    .alpha(if (i == 1) 1f else 0.45f)
-            )
+            AnimatedContent(
+                targetState = line?.text ?: "",
+                transitionSpec = { fadeIn(tween(200)) togetherWith fadeOut(tween(150)) },
+                label = "line$i"
+            ) { text ->
+                Text(
+                    text,
+                    style = if (i == 1) {
+                        MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold)
+                    } else {
+                        MaterialTheme.typography.bodyLarge
+                    },
+                    color = if (i == 1) accent else MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 4.dp)
+                        .alpha(if (i == 1) 1f else 0.45f)
+                )
+            }
         }
     }
 }
@@ -507,25 +561,4 @@ private fun currentLineIndex(lines: List<LyricLine>, posMs: Long): Int {
         if (lines[i].timeMs <= posMs) idx = i else break
     }
     return idx
-}
-
-/** Warna rata-rata sampul (untuk gradasi latar) — sampel kecil agar cepat. */
-private fun averageColor(bmp: Bitmap): Color {
-    // createScaledBitmap mengembalikan bitmap yang sama bila ukurannya sudah 8x8 —
-    // jangan sampai recycle bitmap cache yang sedang dipakai.
-    val s = if (bmp.width == 8 && bmp.height == 8) bmp else Bitmap.createScaledBitmap(bmp, 8, 8, true)
-    var r = 0
-    var g = 0
-    var b = 0
-    for (x in 0 until 8) {
-        for (y in 0 until 8) {
-            val c = s.getPixel(x, y)
-            r += (c shr 16) and 0xFF
-            g += (c shr 8) and 0xFF
-            b += c and 0xFF
-        }
-    }
-    if (s !== bmp) s.recycle()
-    val n = 64
-    return Color(r / n, g / n, b / n)
 }

@@ -6,6 +6,13 @@ import android.content.pm.PackageManager
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -23,6 +30,8 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -62,12 +71,22 @@ fun MusicApp(vm: LibraryViewModel = viewModel()) {
         if (hasPermission.value) vm.loadSaved()
     }
 
+    LaunchedEffect(Unit) {
+        // Auto-scan saat dibuka: lagu baru langsung terdeteksi (tanpa tekan "Pindai").
+        if (hasPermission.value) vm.loadSaved()
+    }
+    val hasTrack by PlayerController.currentTrack.collectAsState()
+
     MusicAppTheme(darkTheme = dark) {
         Scaffold(
             containerColor = MaterialTheme.colorScheme.background,
             bottomBar = {
                 Column {
-                    if (tab != 0) {
+                    AnimatedVisibility(
+                        visible = tab != 0 && hasTrack != null,
+                        enter = fadeIn() + slideInVertically { it / 2 },
+                        exit = fadeOut() + slideOutVertically { it / 2 }
+                    ) {
                         MiniPlayer(onOpen = { tab = 0; albumOpen = false; albumName = null })
                     }
                     NavigationBar(containerColor = MaterialTheme.colorScheme.surface) {
@@ -101,46 +120,64 @@ fun MusicApp(vm: LibraryViewModel = viewModel()) {
         ) { padding ->
             Box(Modifier.padding(padding).fillMaxSize()) {
                 val album = albumName
-                when {
-                    albumOpen && album != null -> AlbumScreen(
-                        vm = vm,
-                        album = album,
-                        artist = albumArtist,
-                        onBack = { albumOpen = false; albumName = null },
-                        onPlay = { list, i ->
-                            PlayerController.play(list, i)
+                val screenKey = if (albumOpen && album != null) {
+                    "album\u0000$album\u0000$albumArtist"
+                } else {
+                    "tab\u0000$tab"
+                }
+                Crossfade(
+                    targetState = screenKey,
+                    animationSpec = tween(220),
+                    label = "screen"
+                ) { key ->
+                    val parts = key.split("\u0000")
+                    when (parts[0]) {
+                        "album" -> AlbumScreen(
+                            vm = vm,
+                            album = parts[1],
+                            artist = parts.getOrElse(2) { "" },
+                            onBack = { albumOpen = false; albumName = null },
+                            onPlay = { list, i ->
+                                PlayerController.play(list, i)
+                            }
+                        )
+                        "tab" -> when (parts[1]) {
+                            "0" -> NowPlayingScreen()
+                            "1" -> AlbumsScreen(
+                                vm = vm,
+                                onOpenAlbum = { a, ar ->
+                                    albumName = a
+                                    albumArtist = ar
+                                    albumOpen = true
+                                }
+                            )
+                            "2" -> LibraryScreen(
+                                vm = vm,
+                                onPlay = { list, i ->
+                                    PlayerController.play(list, i)
+                                    tab = 0
+                                }
+                            )
+                            else -> SettingsScreen(
+                                vm = vm,
+                                themeMode = themeMode,
+                                hasPermission = hasPermission.value,
+                                hasNotifPermission = hasNotifPermission.value,
+                                onThemeChange = {
+                                    themeMode = it
+                                    prefs.edit().putString("theme", it).apply()
+                                },
+                                onRequestPermission = {
+                                    permissionLauncher.launch(audioPermissions())
+                                },
+                                onRequestNotifPermission = {
+                                    permissionLauncher.launch(
+                                        arrayOf(Manifest.permission.POST_NOTIFICATIONS)
+                                    )
+                                }
+                            )
                         }
-                    )
-                    tab == 0 -> NowPlayingScreen()
-                    tab == 1 -> AlbumsScreen(
-                        vm = vm,
-                        onOpenAlbum = { a, ar ->
-                            albumName = a
-                            albumArtist = ar
-                            albumOpen = true
-                        }
-                    )
-                    tab == 2 -> LibraryScreen(
-                        vm = vm,
-                        onPlay = { list, i ->
-                            PlayerController.play(list, i)
-                            tab = 0
-                        }
-                    )
-                    else -> SettingsScreen(
-                        vm = vm,
-                        themeMode = themeMode,
-                        hasPermission = hasPermission.value,
-                        hasNotifPermission = hasNotifPermission.value,
-                        onThemeChange = {
-                            themeMode = it
-                            prefs.edit().putString("theme", it).apply()
-                        },
-                        onRequestPermission = { permissionLauncher.launch(audioPermissions()) },
-                        onRequestNotifPermission = {
-                            permissionLauncher.launch(arrayOf(Manifest.permission.POST_NOTIFICATIONS))
-                        }
-                    )
+                    }
                 }
             }
         }

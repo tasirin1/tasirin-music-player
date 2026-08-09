@@ -23,6 +23,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
@@ -42,6 +43,7 @@ fun MiniPlayer(onOpen: () -> Unit) {
     val queue by PlayerController.queue.collectAsState()
     val path = track?.path
     val art by produceState<Bitmap?>(null, path) { value = path?.let { ArtCache.load(it) } }
+    val artColor = remember(art) { art?.let { averageColor(it) } }
 
     val current = track ?: return
 
@@ -51,7 +53,7 @@ fun MiniPlayer(onOpen: () -> Unit) {
             modifier = Modifier
                 .fillMaxWidth()
                 .height(2.dp),
-            color = Accent,
+            color = artColor ?: Accent,
             trackColor = MaterialTheme.colorScheme.surfaceVariant
         )
         Row(
