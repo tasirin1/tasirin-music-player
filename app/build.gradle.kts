@@ -39,6 +39,13 @@ android {
         }
     }
 
+    packaging {
+        jniLibs {
+            // Kompres .so di dalam APK (lebih kecil untuk diunduh; diekstrak saat instal).
+            useLegacyPackaging = true
+        }
+    }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
