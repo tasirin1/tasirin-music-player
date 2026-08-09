@@ -436,7 +436,7 @@ private fun LyricsCard(
                                 .verticalScroll(rememberScrollState())
                         )
                     } else {
-                        SyncedLyrics(lines, positionMs)
+                        SyncedLyrics(lines, positionMs, Modifier.weight(1f))
                     }
                 }
             }
@@ -446,7 +446,7 @@ private fun LyricsCard(
 
 /** Lirik sinkron ala Oto Music: baris aktif menyala, sisanya redup, auto-scroll. */
 @Composable
-private fun SyncedLyrics(lines: List<LyricLine>, positionMs: Long) {
+private fun SyncedLyrics(lines: List<LyricLine>, positionMs: Long, modifier: Modifier) {
     val state = rememberLazyListState()
     val index = remember(lines, positionMs) { currentLineIndex(lines, positionMs) }
     LaunchedEffect(index) {
@@ -454,7 +454,7 @@ private fun SyncedLyrics(lines: List<LyricLine>, positionMs: Long) {
     }
     LazyColumn(
         state = state,
-        modifier = Modifier.weight(1f)
+        modifier = modifier
     ) {
         itemsIndexed(lines) { i, line ->
             Text(

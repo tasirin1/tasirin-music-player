@@ -107,9 +107,10 @@ private fun AlbumCard(album: AlbumItem, onClick: () -> Unit) {
                 .background(MaterialTheme.colorScheme.surfaceVariant),
             contentAlignment = Alignment.Center
         ) {
-            if (art != null) {
+            val bmp = art
+            if (bmp != null) {
                 Image(
-                    art.asImageBitmap(),
+                    bmp.asImageBitmap(),
                     null,
                     Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop
