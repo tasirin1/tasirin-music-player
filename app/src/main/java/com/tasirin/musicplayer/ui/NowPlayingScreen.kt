@@ -536,10 +536,11 @@ private fun SyncedLyrics(
     val state = rememberLazyListState()
     val index = remember(lines, positionMs) { currentLineIndex(lines, positionMs) }
     var viewportH by remember { mutableStateOf(0.dp) }
+    val density = LocalDensity.current
 
     Box(
         modifier.onSizeChanged {
-            viewportH = with(LocalDensity.current) { it.height.toDp() }
+            viewportH = with(density) { it.height.toDp() }
         }
     ) {
         LazyColumn(
