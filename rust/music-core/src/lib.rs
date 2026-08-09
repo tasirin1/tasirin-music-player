@@ -30,7 +30,7 @@ pub extern "system" fn Java_com_tasirin_musicplayer_MusicCore_version(
 /// Gagal apa pun → `[]` (Kotlin tetap dapat hasil kosong, bukan null).
 #[no_mangle]
 pub extern "system" fn Java_com_tasirin_musicplayer_MusicCore_scan(
-    env: JNIEnv,
+    mut env: JNIEnv,
     _this: JObject,
     root: jni::objects::JString,
 ) -> jstring {
@@ -46,7 +46,7 @@ pub extern "system" fn Java_com_tasirin_musicplayer_MusicCore_scan(
 /// `albumArt(path: String): ByteArray?` — byte sampul lagu, atau null.
 #[no_mangle]
 pub extern "system" fn Java_com_tasirin_musicplayer_MusicCore_albumArt(
-    env: JNIEnv,
+    mut env: JNIEnv,
     _this: JObject,
     path: jni::objects::JString,
 ) -> jbyteArray {
@@ -55,7 +55,9 @@ pub extern "system" fn Java_com_tasirin_musicplayer_MusicCore_albumArt(
         meta::album_art(&path_str).ok().flatten()
     }));
     match bytes {
-        Ok(Some(b)) => env.byte_array_from_slice(&b).unwrap_or(std::ptr::null_mut()),
+        Ok(Some(b)) => env.byte_array_from_slice(&b)
+            .map(|arr| arr.into_raw())
+            .unwrap_or(std::ptr::null_mut()),
         _ => std::ptr::null_mut(),
     }
 }
