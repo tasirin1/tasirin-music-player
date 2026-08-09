@@ -18,8 +18,6 @@ object FavoritesStore {
         _paths.value = prefs.getStringSet("favorites", emptySet())?.toSet() ?: emptySet()
     }
 
-    fun isFavorite(path: String): Boolean = path in _paths.value
-
     fun toggle(path: String) {
         if (path.isBlank()) return
         val cur = _paths.value.toMutableSet()

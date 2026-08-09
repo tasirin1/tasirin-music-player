@@ -23,6 +23,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
@@ -43,13 +44,15 @@ fun AlbumScreen(
     onPlay: (List<Track>, Int) -> Unit
 ) {
     val tracks by vm.tracks.collectAsState()
-    val albumTracks = tracks
-        .filter {
-            it.album == album && (
-                if (artist == "<Tanpa Artis>") it.artist.isBlank() else it.artist == artist
-                )
-        }
-        .sortedBy { if (it.trackNum > 0) it.trackNum else Int.MAX_VALUE }
+    val albumTracks = remember(tracks, album, artist) {
+        tracks
+            .filter {
+                it.album == album && (
+                    if (artist == "<Tanpa Artis>") it.artist.isBlank() else it.artist == artist
+                    )
+            }
+            .sortedBy { if (it.trackNum > 0) it.trackNum else Int.MAX_VALUE }
+    }
     val coverPath = albumTracks.firstOrNull()?.path
     val art by produceState<Bitmap?>(null, coverPath) {
         value = coverPath?.let { ArtCache.load(it) }

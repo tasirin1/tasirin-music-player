@@ -12,7 +12,6 @@ val TextSecondary = Color(0xFF9A9AA8)
 
 // Aksen khas Apple Music (merah muda)
 val Accent = Color(0xFFFA2D48)
-val AccentSoft = Color(0xFF331019)
 
 // Palet terang
 val LightBg = Color(0xFFF5F5F7)

@@ -6,7 +6,7 @@ use lofty::read_from_path;
 use serde::Serialize;
 
 /// Satu lagu hasil pemindaian (dikirim ke Kotlin sebagai JSON).
-#[derive(Serialize, Clone, Debug)]
+#[derive(Serialize)]
 pub struct TrackMeta {
     pub path: String,
     pub title: String,
@@ -16,7 +16,6 @@ pub struct TrackMeta {
     pub year: u32,
     pub track: u32,
     pub duration_ms: u64,
-    pub sample_rate: u32,
     pub lyrics: String,
 }
 
@@ -70,7 +69,6 @@ pub fn read_meta(path: &str) -> Result<TrackMeta, String> {
         year: tag.and_then(|t| t.year()).unwrap_or(0),
         track: tag.and_then(|t| t.track()).unwrap_or(0),
         duration_ms: props.duration().as_millis() as u64,
-        sample_rate: props.sample_rate().unwrap_or(0),
         lyrics,
     })
 }

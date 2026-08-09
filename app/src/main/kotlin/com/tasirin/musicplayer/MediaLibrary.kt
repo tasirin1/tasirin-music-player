@@ -6,6 +6,9 @@ import android.provider.MediaStore
 /** Pustaka via MediaStore — untuk Android Auto & resolusi lagu dari media id. */
 object MediaLibrary {
 
+    private var cached: List<Track>? = null
+    private var cachedAt = 0L
+
     private val projection = arrayOf(
         MediaStore.Audio.Media._ID,
         MediaStore.Audio.Media.DATA,
@@ -17,7 +20,19 @@ object MediaLibrary {
         MediaStore.Audio.Media.TRACK
     )
 
+    /** Pustaka lengkap, cache 30 detik — Android Auto sering meminta ulang konten. */
+    @Synchronized
     fun queryAll(context: Context): List<Track> {
+        val now = System.currentTimeMillis()
+        val c = cached
+        if (c != null && now - cachedAt < 30_000) return c
+        val fresh = queryAllFresh(context)
+        cached = fresh
+        cachedAt = now
+        return fresh
+    }
+
+    private fun queryAllFresh(context: Context): List<Track> {
         val out = mutableListOf<Track>()
         val sort = "${MediaStore.Audio.Media.TITLE} COLLATE NOCASE ASC"
         context.contentResolver.query(

@@ -11,6 +11,8 @@ import java.security.MessageDigest
 /** Cache album art: memori (LRU) + disk, sumber dari inti Rust via JNI. */
 object ArtCache {
 
+    private const val MAX_EDGE = 768
+
     private lateinit var ctx: Context
     private val mem = object : LinkedHashMap<String, Bitmap>(48, 0.75f, true) {
         override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Bitmap>?): Boolean = size > 96
@@ -43,7 +45,16 @@ object ArtCache {
     }
 
     private fun decodeAndCache(path: String, file: File): Bitmap? {
-        val bmp = BitmapFactory.decodeFile(file.absolutePath) ?: return null
+        // Decode ter-sampling: sampul 768px cukup untuk semua ukuran (mini/cover/latar),
+        // jauh lebih hemat memori daripada bitmap resolusi penuh.
+        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        BitmapFactory.decodeFile(file.absolutePath, bounds)
+        var sample = 1
+        while (bounds.outWidth / sample > MAX_EDGE || bounds.outHeight / sample > MAX_EDGE) sample *= 2
+        val bmp = BitmapFactory.decodeFile(
+            file.absolutePath,
+            BitmapFactory.Options().apply { inSampleSize = sample }
+        ) ?: return null
         mem[path] = bmp
         return bmp
     }

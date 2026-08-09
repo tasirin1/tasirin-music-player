@@ -9,12 +9,16 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLEncoder
 import java.security.MessageDigest
+import java.util.LinkedHashMap
 
 /** Cari lirik online lewat LRCLIB (gratis, tanpa API key) + cache memori/disk. */
 object LyricsLoader {
 
     private lateinit var ctx: Context
-    private val mem = mutableMapOf<String, String>()
+    // LRU: batasi jumlah lirik di memori agar tidak membengkak (satu lagu bisa ratusan KB).
+    private val mem = object : LinkedHashMap<String, String>(64, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, String>?): Boolean = size > 256
+    }
 
     fun init(context: Context) {
         ctx = context.applicationContext
