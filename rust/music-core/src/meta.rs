@@ -17,6 +17,7 @@ pub struct TrackMeta {
     pub track: u32,
     pub duration_ms: u64,
     pub sample_rate: u32,
+    pub lyrics: String,
 }
 
 fn tag_text<'a>(tag: Option<&'a lofty::tag::Tag>, f: impl Fn(&'a lofty::tag::Tag) -> Option<std::borrow::Cow<'a, str>>) -> String {
@@ -45,6 +46,11 @@ pub fn read_meta(path: &str) -> Result<TrackMeta, String> {
     let artist = tag_text(tag, |t| t.artist());
     let album = tag_text(tag, |t| t.album());
     let genre = tag_text(tag, |t| t.genre());
+    let lyrics = tag
+        .and_then(|t| t.get_string(&ItemKey::Lyrics))
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty())
+        .unwrap_or_default();
 
     Ok(TrackMeta {
         path: path.to_string(),
@@ -56,6 +62,7 @@ pub fn read_meta(path: &str) -> Result<TrackMeta, String> {
         track: tag.and_then(|t| t.track()).unwrap_or(0),
         duration_ms: props.duration().as_millis() as u64,
         sample_rate: props.sample_rate().unwrap_or(0),
+        lyrics,
     })
 }
 

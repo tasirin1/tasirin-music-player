@@ -10,7 +10,9 @@ data class Track(
     val album: String,
     val genre: String,
     val year: Int,
-    val durationMs: Long
+    val durationMs: Long,
+    val trackNum: Int = 0,
+    val lyrics: String = ""
 ) {
     val durationLabel: String get() = formatMs(durationMs)
 
@@ -24,7 +26,9 @@ data class Track(
                 album = o.optString("album", ""),
                 genre = o.optString("genre", ""),
                 year = o.optInt("year", 0),
-                durationMs = o.optLong("duration_ms", 0)
+                durationMs = o.optLong("duration_ms", 0),
+                trackNum = o.optInt("track", 0),
+                lyrics = o.optString("lyrics", "")
             )
         }
 

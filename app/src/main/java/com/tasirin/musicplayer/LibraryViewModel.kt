@@ -117,6 +117,8 @@ class LibraryViewModel(app: Application) : AndroidViewModel(app) {
                     .put("genre", t.genre)
                     .put("year", t.year)
                     .put("duration_ms", t.durationMs)
+                    .put("track", t.trackNum)
+                    .put("lyrics", t.lyrics)
             )
         }
         prefs.edit().putString("library", arr.toString()).apply()
