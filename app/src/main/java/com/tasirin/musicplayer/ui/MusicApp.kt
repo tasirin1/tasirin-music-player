@@ -97,7 +97,8 @@ fun MusicApp(vm: LibraryViewModel = viewModel()) {
                         }
                     )
                     1 -> {
-                        val current by PlayerController.currentTrack.collectAsState()
+                        val track = PlayerController.currentTrack.collectAsState().value
+                        val current = track
                         if (albumOpen && current != null) {
                             AlbumScreen(
                                 vm = vm,
