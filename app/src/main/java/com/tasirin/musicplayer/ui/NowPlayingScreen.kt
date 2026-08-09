@@ -1,6 +1,9 @@
 package com.tasirin.musicplayer.ui
 
 import android.graphics.Bitmap
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -13,7 +16,9 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.onSizeChanged
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -59,6 +64,8 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -152,53 +159,41 @@ fun NowPlayingScreen() {
                     .clipToBounds(),
                 contentAlignment = Alignment.Center
             ) {
-                if (showLyrics) {
-                    LyricsCard(
-                        lyrics = lyricsText,
-                        loading = lyricsLoading,
-                        positionMs = pos,
-                        onRetry = { lyricsAttempt++ },
-                        onClose = { showLyrics = false },
-                        secondary = secondary,
-                        surfaceVariant = surfaceVariant
-                    )
-                } else {
+                Box(
+                    Modifier
+                        .fillMaxWidth(0.85f)
+                        .aspectRatio(1f),
+                    contentAlignment = Alignment.Center
+                ) {
                     Box(
                         Modifier
-                            .fillMaxWidth(0.85f)
-                            .aspectRatio(1f),
-                        contentAlignment = Alignment.Center
+                            .fillMaxSize()
+                            .scale(1.1f)
+                            .background(
+                                Brush.radialGradient(
+                                    listOf(
+                                        artColor?.copy(alpha = 0.3f) ?: Color.Transparent,
+                                        Color.Transparent
+                                    )
+                                ),
+                                shape = RoundedCornerShape(28.dp)
+                            )
+                    )
+                    Surface(
+                        shape = RoundedCornerShape(24.dp),
+                        color = surfaceVariant,
+                        shadowElevation = 28.dp,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clickable { showLyrics = true }
                     ) {
-                        Box(
-                            Modifier
-                                .fillMaxSize()
-                                .scale(1.1f)
-                                .background(
-                                    Brush.radialGradient(
-                                        listOf(
-                                            artColor?.copy(alpha = 0.3f) ?: Color.Transparent,
-                                            Color.Transparent
-                                        )
-                                    ),
-                                    shape = RoundedCornerShape(28.dp)
-                                )
-                        )
-                        Surface(
-                            shape = RoundedCornerShape(24.dp),
-                            color = surfaceVariant,
-                            shadowElevation = 28.dp,
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .clickable { showLyrics = true }
-                        ) {
-                            art?.let {
-                                Image(it.asImageBitmap(), null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
-                            } ?: Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                Icon(
-                                    Icons.Filled.MusicNote, null,
-                                    tint = secondary, modifier = Modifier.size(96.dp)
-                                )
-                            }
+                        art?.let {
+                            Image(it.asImageBitmap(), null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+                        } ?: Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            Icon(
+                                Icons.Filled.MusicNote, null,
+                                tint = secondary, modifier = Modifier.size(96.dp)
+                            )
                         }
                     }
                 }
@@ -362,6 +357,24 @@ fun NowPlayingScreen() {
 
             Spacer(Modifier.height(24.dp))
         }
+
+        AnimatedVisibility(
+            visible = showLyrics,
+            enter = fadeIn(),
+            exit = fadeOut()
+        ) {
+            LyricsOverlay(
+                lyrics = lyricsText,
+                loading = lyricsLoading,
+                positionMs = pos,
+                art = art,
+                bg = bg,
+                title = current.title,
+                artist = current.artist,
+                onRetry = { lyricsAttempt++ },
+                onClose = { showLyrics = false }
+            )
+        }
     }
 }
 
@@ -386,39 +399,68 @@ private fun EmptyNowPlaying() {
     }
 }
 
+/** Overlay lirik penuh layar bergaya Oto Music: latar sampul redup + baris aktif di tengah. */
 @Composable
-private fun LyricsCard(
+private fun LyricsOverlay(
     lyrics: String?,
     loading: Boolean,
     positionMs: Long,
+    art: Bitmap?,
+    bg: Color,
+    title: String,
+    artist: String,
     onRetry: () -> Unit,
-    onClose: () -> Unit,
-    secondary: Color,
-    surfaceVariant: Color
+    onClose: () -> Unit
 ) {
-    Surface(
-        shape = RoundedCornerShape(24.dp),
-        color = surfaceVariant,
-        modifier = Modifier
-            .fillMaxWidth(0.85f)
-            .aspectRatio(1f)
-    ) {
-        Column(Modifier.padding(16.dp)) {
+    Box(Modifier.fillMaxSize().background(bg)) {
+        art?.let {
+            Image(
+                bitmap = it.asImageBitmap(),
+                contentDescription = null,
+                modifier = Modifier.fillMaxSize().alpha(0.16f),
+                contentScale = ContentScale.Crop
+            )
+        }
+        Box(
+            Modifier.fillMaxSize().background(
+                Brush.verticalGradient(
+                    listOf(
+                        bg.copy(alpha = 0.95f),
+                        bg.copy(alpha = 0.9f),
+                        bg.copy(alpha = 0.95f)
+                    )
+                )
+            )
+        )
+        Column(Modifier.fillMaxSize().padding(top = 10.dp)) {
             Row(
-                Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("Lirik", style = MaterialTheme.typography.titleMedium)
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    if (lyrics == null && !loading) {
-                        TextButton(onClick = onRetry) {
-                            Text("Coba lagi", color = secondary)
-                        }
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        "Lirik",
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    if (artist.isNotBlank()) {
+                        Spacer(Modifier.height(2.dp))
+                        Text(
+                            "$title — $artist",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
                     }
-                    IconButton(onClick = onClose) {
-                        Icon(Icons.Filled.Close, "Tutup", tint = secondary)
-                    }
+                }
+                IconButton(onClick = onClose) {
+                    Icon(
+                        Icons.Filled.Close, "Tutup",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
             }
             when {
@@ -430,24 +472,52 @@ private fun LyricsCard(
                 ) {
                     CircularProgressIndicator()
                 }
-                lyrics == null -> Text(
-                    "Lirik tidak ditemukan — coba lagi atau periksa koneksi internet",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = secondary
-                )
+                lyrics == null -> Box(
+                    Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("Lirik tidak ditemukan", style = MaterialTheme.typography.titleMedium)
+                        Spacer(Modifier.height(6.dp))
+                        Text(
+                            "Periksa koneksi internet lalu coba lagi",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        TextButton(onClick = onRetry) {
+                            Text("Coba lagi")
+                        }
+                    }
+                }
                 else -> {
                     val lines = remember(lyrics) { parseLrc(lyrics) }
                     if (lines.isEmpty()) {
-                        Text(
-                            lyrics,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            modifier = Modifier
+                        Column(
+                            Modifier
                                 .weight(1f)
                                 .verticalScroll(rememberScrollState())
-                        )
+                                .padding(horizontal = 28.dp, vertical = 16.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            lyrics.lines().forEach { l ->
+                                Text(
+                                    l,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    textAlign = TextAlign.Center,
+                                    modifier = Modifier.padding(vertical = 4.dp)
+                                )
+                            }
+                        }
                     } else {
-                        SyncedLyrics(lines, positionMs, Modifier.weight(1f))
+                        SyncedLyrics(
+                            lines,
+                            positionMs,
+                            Modifier.weight(1f).fillMaxWidth(),
+                            bg
+                        )
                     }
                 }
             }
@@ -455,26 +525,72 @@ private fun LyricsCard(
     }
 }
 
-/** Lirik sinkron: baris aktif menyala, sisanya redup, auto-scroll. */
+/** Lirik sinkron ala Oto Music: baris aktif besar + aksen di tengah, lama redup, fade di tepi. */
 @Composable
-private fun SyncedLyrics(lines: List<LyricLine>, positionMs: Long, modifier: Modifier) {
+private fun SyncedLyrics(
+    lines: List<LyricLine>,
+    positionMs: Long,
+    modifier: Modifier,
+    bg: Color
+) {
     val state = rememberLazyListState()
     val index = remember(lines, positionMs) { currentLineIndex(lines, positionMs) }
-    LaunchedEffect(index) {
-        state.animateScrollToItem((index - 1).coerceAtLeast(0))
-    }
-    LazyColumn(
-        state = state,
-        modifier = modifier
+    var viewportH by remember { mutableStateOf(0.dp) }
+
+    Box(
+        modifier.onSizeChanged {
+            viewportH = with(LocalDensity.current) { it.height.toDp() }
+        }
     ) {
-        itemsIndexed(lines) { i, line ->
-            Text(
-                line.text.ifBlank { "♪" },
-                style = if (i == index) MaterialTheme.typography.titleMedium
-                else MaterialTheme.typography.bodyMedium,
-                color = if (i == index) Accent else MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(vertical = 6.dp)
-            )
+        LazyColumn(
+            state = state,
+            contentPadding = PaddingValues(vertical = viewportH / 2),
+            modifier = Modifier.fillMaxSize()
+        ) {
+            itemsIndexed(lines) { i, line ->
+                val active = i == index
+                Text(
+                    line.text.ifBlank { "♪" },
+                    style = if (active) {
+                        MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.SemiBold)
+                    } else {
+                        MaterialTheme.typography.titleMedium
+                    },
+                    color = if (active) Accent else MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 28.dp, vertical = 10.dp)
+                        .alpha(
+                            when {
+                                active -> 1f
+                                i < index -> 0.35f
+                                else -> 0.6f
+                            }
+                        )
+                )
+            }
+        }
+        val fade = bg.copy(alpha = 0.95f)
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .height(56.dp)
+                .align(Alignment.TopCenter)
+                .background(Brush.verticalGradient(listOf(fade, Color.Transparent)))
+        )
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .height(56.dp)
+                .align(Alignment.BottomCenter)
+                .background(Brush.verticalGradient(listOf(Color.Transparent, fade)))
+        )
+    }
+
+    LaunchedEffect(index, viewportH) {
+        if (viewportH > 0.dp) {
+            state.animateScrollToItem(index)
         }
     }
 }
