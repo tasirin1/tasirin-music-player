@@ -44,7 +44,11 @@ fun AlbumScreen(
 ) {
     val tracks by vm.tracks.collectAsState()
     val albumTracks = tracks
-        .filter { it.album == album }
+        .filter {
+            it.album == album && (
+                if (artist == "<Tanpa Artis>") it.artist.isBlank() else it.artist == artist
+                )
+        }
         .sortedBy { if (it.trackNum > 0) it.trackNum else Int.MAX_VALUE }
     val coverPath = albumTracks.firstOrNull()?.path
     val art by produceState<Bitmap?>(null, coverPath) {
@@ -75,11 +79,11 @@ fun AlbumScreen(
                     Artwork(art, size = 200.dp, corner = 16.dp)
                     Spacer(Modifier.height(16.dp))
                     Text(
-                        album.ifBlank { "Album" },
+                        album.ifBlank { "<Tanpa Album>" },
                         style = MaterialTheme.typography.headlineMedium,
                         textAlign = TextAlign.Center
                     )
-                    if (artist.isNotBlank()) {
+                    if (artist.isNotBlank() && artist != "<Tanpa Artis>") {
                         Spacer(Modifier.height(4.dp))
                         Text(
                             artist,

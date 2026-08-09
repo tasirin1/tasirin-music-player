@@ -14,17 +14,12 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
@@ -60,8 +55,6 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.layout.onSizeChanged
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -389,7 +382,7 @@ private fun EmptyNowPlaying() {
     }
 }
 
-/** Lirik tampil di area sampul: baris aktif sinkron ala Oto Music. */
+/** Lirik tampil di area sampul — 3 baris sinkron; ketuk kartu untuk menutup. */
 @Composable
 private fun LyricsCard(
     lyrics: String?,
@@ -402,148 +395,80 @@ private fun LyricsCard(
     Surface(
         shape = RoundedCornerShape(24.dp),
         color = surfaceVariant,
-        modifier = Modifier.fillMaxSize()
+        modifier = Modifier
+            .fillMaxSize()
+            .clickable { onClose() }
     ) {
-        Column(Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
-            Row(
-                Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
+        when {
+            loading -> Box(
+                Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
             ) {
-                Text(
-                    "Lirik",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.weight(1f)
-                )
-                IconButton(onClick = onClose, modifier = Modifier.size(32.dp)) {
-                    Icon(
-                        Icons.Filled.Close, "Tutup",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(20.dp)
+                CircularProgressIndicator()
+            }
+            lyrics == null -> Box(
+                Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        "Lirik tidak ditemukan",
+                        style = MaterialTheme.typography.bodyMedium,
+                        textAlign = TextAlign.Center
                     )
+                    TextButton(onClick = onRetry) {
+                        Text("Coba lagi")
+                    }
                 }
             }
-            when {
-                loading -> Box(
-                    Modifier
-                        .weight(1f)
-                        .fillMaxWidth(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator()
-                }
-                lyrics == null -> Box(
-                    Modifier
-                        .weight(1f)
-                        .fillMaxWidth(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(
-                            "Lirik tidak ditemukan",
-                            style = MaterialTheme.typography.bodyMedium,
-                            textAlign = TextAlign.Center
-                        )
-                        TextButton(onClick = onRetry) {
-                            Text("Coba lagi")
-                        }
-                    }
-                }
-                else -> {
-                    val lines = remember(lyrics) { parseLrc(lyrics) }
-                    if (lines.isEmpty()) {
-                        Text(
-                            lyrics,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier
-                                .weight(1f)
-                                .verticalScroll(rememberScrollState())
-                                .padding(horizontal = 8.dp)
-                        )
-                    } else {
-                        SyncedLyrics(
-                            lines,
-                            positionMs,
-                            Modifier.weight(1f).fillMaxWidth(),
-                            surfaceVariant
-                        )
-                    }
+            else -> {
+                val lines = remember(lyrics) { parseLrc(lyrics) }
+                if (lines.isEmpty()) {
+                    Text(
+                        lyrics,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .verticalScroll(rememberScrollState())
+                            .padding(horizontal = 12.dp, vertical = 16.dp)
+                    )
+                } else {
+                    ThreeLineLyrics(lines, positionMs, Modifier.fillMaxSize())
                 }
             }
         }
     }
 }
 
-
-/** Lirik sinkron ala Oto Music: baris aktif besar + aksen di tengah, lama redup, fade di tepi. */
+/** Tiga baris lirik: baris sebelumnya, baris aktif (tengah), baris berikutnya. */
 @Composable
-private fun SyncedLyrics(
-    lines: List<LyricLine>,
-    positionMs: Long,
-    modifier: Modifier,
-    bg: Color
-) {
-    val state = rememberLazyListState()
+private fun ThreeLineLyrics(lines: List<LyricLine>, positionMs: Long, modifier: Modifier) {
     val index = remember(lines, positionMs) { currentLineIndex(lines, positionMs) }
-    var viewportH by remember { mutableStateOf(0.dp) }
-    val density = LocalDensity.current
-
-    Box(
-        modifier.onSizeChanged {
-            viewportH = with(density) { it.height.toDp() }
-        }
+    Column(
+        modifier,
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        LazyColumn(
-            state = state,
-            contentPadding = PaddingValues(vertical = viewportH / 2),
-            modifier = Modifier.fillMaxSize()
-        ) {
-            itemsIndexed(lines) { i, line ->
-                val active = i == index
-                Text(
-                    line.text.ifBlank { "♪" },
-                    style = if (active) {
-                        MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold)
-                    } else {
-                        MaterialTheme.typography.bodyLarge
-                    },
-                    color = if (active) Accent else MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 6.dp)
-                        .alpha(
-                            when {
-                                active -> 1f
-                                i < index -> 0.35f
-                                else -> 0.6f
-                            }
-                        )
-                )
-            }
-        }
-        val fade = bg
-        Box(
-            Modifier
-                .fillMaxWidth()
-                .height(40.dp)
-                .align(Alignment.TopCenter)
-                .background(Brush.verticalGradient(listOf(fade, Color.Transparent)))
-        )
-        Box(
-            Modifier
-                .fillMaxWidth()
-                .height(40.dp)
-                .align(Alignment.BottomCenter)
-                .background(Brush.verticalGradient(listOf(Color.Transparent, fade)))
-        )
-    }
-
-    LaunchedEffect(index, viewportH) {
-        if (viewportH > 0.dp) {
-            state.animateScrollToItem(index)
+        listOf(index - 1, index, index + 1).forEachIndexed { i, li ->
+            val line = lines.getOrNull(li)
+            Text(
+                line?.text ?: "",
+                style = if (i == 1) {
+                    MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold)
+                } else {
+                    MaterialTheme.typography.bodyLarge
+                },
+                color = if (i == 1) Accent else MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 4.dp)
+                    .alpha(if (i == 1) 1f else 0.45f)
+            )
         }
     }
 }
@@ -586,7 +511,9 @@ private fun currentLineIndex(lines: List<LyricLine>, posMs: Long): Int {
 
 /** Warna rata-rata sampul (untuk gradasi latar) — sampel kecil agar cepat. */
 private fun averageColor(bmp: Bitmap): Color {
-    val s = Bitmap.createScaledBitmap(bmp, 8, 8, true)
+    // createScaledBitmap mengembalikan bitmap yang sama bila ukurannya sudah 8x8 —
+    // jangan sampai recycle bitmap cache yang sedang dipakai.
+    val s = if (bmp.width == 8 && bmp.height == 8) bmp else Bitmap.createScaledBitmap(bmp, 8, 8, true)
     var r = 0
     var g = 0
     var b = 0
@@ -598,7 +525,7 @@ private fun averageColor(bmp: Bitmap): Color {
             b += c and 0xFF
         }
     }
-    s.recycle()
+    if (s !== bmp) s.recycle()
     val n = 64
     return Color(r / n, g / n, b / n)
 }

@@ -47,8 +47,10 @@ fun SettingsScreen(
     vm: LibraryViewModel,
     themeMode: String,
     hasPermission: Boolean,
+    hasNotifPermission: Boolean,
     onThemeChange: (String) -> Unit,
-    onRequestPermission: () -> Unit
+    onRequestPermission: () -> Unit,
+    onRequestNotifPermission: () -> Unit
 ) {
     val folder by vm.folder.collectAsState()
     val scanning by vm.scanning.collectAsState()
@@ -92,6 +94,26 @@ fun SettingsScreen(
                         modifier = Modifier.weight(1f)
                     )
                     TextButton(onClick = onRequestPermission) { Text("Beri izin") }
+                }
+            }
+            Spacer(Modifier.height(10.dp))
+        }
+        if (!hasNotifPermission) {
+            Surface(
+                shape = RoundedCornerShape(14.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    Modifier.padding(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        "Izin notifikasi dibutuhkan untuk kontrol media di laci notifikasi.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.weight(1f)
+                    )
+                    TextButton(onClick = onRequestNotifPermission) { Text("Beri izin") }
                 }
             }
             Spacer(Modifier.height(10.dp))

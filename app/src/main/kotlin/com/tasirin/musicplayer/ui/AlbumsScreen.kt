@@ -47,11 +47,11 @@ fun AlbumsScreen(
     val tracks by vm.tracks.collectAsState()
     val albums = remember(tracks) {
         tracks
-            .groupBy { it.album.ifBlank { "<Tanpa Album>" } }
-            .map { (name, list) ->
+            .groupBy { it.album to it.artist.ifBlank { "<Tanpa Artis>" } }
+            .map { (key, list) ->
                 AlbumItem(
-                    name = name,
-                    artist = list.firstOrNull { it.artist.isNotBlank() }?.artist.orEmpty(),
+                    name = key.first,
+                    artist = key.second,
                     tracks = list
                 )
             }
@@ -128,13 +128,16 @@ private fun AlbumCard(album: AlbumItem, onClick: () -> Unit) {
         }
         Spacer(Modifier.height(8.dp))
         Text(
-            album.name,
+            album.name.ifBlank { "<Tanpa Album>" },
             style = MaterialTheme.typography.titleMedium,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
         )
         Text(
-            listOf(album.artist, "${album.tracks.size} lagu").filter { it.isNotBlank() }
+            listOf(
+                album.artist.takeUnless { it == "<Tanpa Artis>" },
+                "${album.tracks.size} lagu"
+            ).filter { !it.isNullOrBlank() }
                 .joinToString(" · "),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,

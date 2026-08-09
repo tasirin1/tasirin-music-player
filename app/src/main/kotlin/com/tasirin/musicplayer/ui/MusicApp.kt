@@ -53,10 +53,12 @@ fun MusicApp(vm: LibraryViewModel = viewModel()) {
     var albumName by rememberSaveable { mutableStateOf<String?>(null) }
     var albumArtist by rememberSaveable { mutableStateOf("") }
     val hasPermission = remember { mutableStateOf(hasAudioPermission(context)) }
+    val hasNotifPermission = remember { mutableStateOf(hasNotifPermissionGranted(context)) }
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { _ ->
         hasPermission.value = hasAudioPermission(context)
+        hasNotifPermission.value = hasNotifPermissionGranted(context)
         if (hasPermission.value) vm.loadSaved()
     }
 
@@ -78,14 +80,14 @@ fun MusicApp(vm: LibraryViewModel = viewModel()) {
                         NavigationBarItem(
                             selected = tab == 1,
                             onClick = { tab = 1; albumOpen = false; albumName = null },
-                            icon = { Icon(Icons.Filled.LibraryMusic, contentDescription = null) },
-                            label = { Text("Perpustakaan") }
+                            icon = { Icon(Icons.Filled.Album, contentDescription = null) },
+                            label = { Text("Album") }
                         )
                         NavigationBarItem(
                             selected = tab == 2,
                             onClick = { tab = 2; albumOpen = false; albumName = null },
-                            icon = { Icon(Icons.Filled.Album, contentDescription = null) },
-                            label = { Text("Album") }
+                            icon = { Icon(Icons.Filled.LibraryMusic, contentDescription = null) },
+                            label = { Text("Perpustakaan") }
                         )
                         NavigationBarItem(
                             selected = tab == 3,
@@ -110,14 +112,7 @@ fun MusicApp(vm: LibraryViewModel = viewModel()) {
                         }
                     )
                     tab == 0 -> NowPlayingScreen()
-                    tab == 1 -> LibraryScreen(
-                        vm = vm,
-                        onPlay = { list, i ->
-                            PlayerController.play(list, i)
-                            tab = 0
-                        }
-                    )
-                    tab == 2 -> AlbumsScreen(
+                    tab == 1 -> AlbumsScreen(
                         vm = vm,
                         onOpenAlbum = { a, ar ->
                             albumName = a
@@ -125,15 +120,26 @@ fun MusicApp(vm: LibraryViewModel = viewModel()) {
                             albumOpen = true
                         }
                     )
+                    tab == 2 -> LibraryScreen(
+                        vm = vm,
+                        onPlay = { list, i ->
+                            PlayerController.play(list, i)
+                            tab = 0
+                        }
+                    )
                     else -> SettingsScreen(
                         vm = vm,
                         themeMode = themeMode,
                         hasPermission = hasPermission.value,
+                        hasNotifPermission = hasNotifPermission.value,
                         onThemeChange = {
                             themeMode = it
                             prefs.edit().putString("theme", it).apply()
                         },
-                        onRequestPermission = { permissionLauncher.launch(audioPermissions()) }
+                        onRequestPermission = { permissionLauncher.launch(audioPermissions()) },
+                        onRequestNotifPermission = {
+                            permissionLauncher.launch(arrayOf(Manifest.permission.POST_NOTIFICATIONS))
+                        }
                     )
                 }
             }
@@ -155,4 +161,12 @@ private fun hasAudioPermission(context: Context): Boolean =
     } else {
         ContextCompat.checkSelfPermission(context, Manifest.permission.READ_EXTERNAL_STORAGE) ==
             PackageManager.PERMISSION_GRANTED
+    }
+
+private fun hasNotifPermissionGranted(context: Context): Boolean =
+    if (Build.VERSION.SDK_INT >= 33) {
+        ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) ==
+            PackageManager.PERMISSION_GRANTED
+    } else {
+        true
     }

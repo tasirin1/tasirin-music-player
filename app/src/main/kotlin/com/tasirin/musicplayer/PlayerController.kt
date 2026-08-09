@@ -44,6 +44,7 @@ object PlayerController {
     fun play(list: List<Track>, start: Int) {
         if (list.isEmpty()) return
         queue.value = list.toList()
+        if (shuffle.value) rebuildShuffle(start)
         setIndex(start)
         startPlayback()
     }
@@ -69,10 +70,10 @@ object PlayerController {
         runCatching { mp?.pause() }
     }
 
-    fun next() = skip(1, manual = true)
+    fun next() = skip(1)
 
     fun prev() {
-        if (positionMs.value > 3000) seekTo(0) else skip(-1, manual = true)
+        if (positionMs.value > 3000) seekTo(0) else skip(-1)
     }
 
     fun seekTo(ms: Long) {
@@ -84,8 +85,7 @@ object PlayerController {
         shuffle.value = on
         shuffleOrder = if (on) {
             val cur = indexInQueue()
-            val rest = queue.value.indices.filter { it != cur }
-            listOf(cur) + rest.shuffled()
+            rebuildOrder(cur)
         } else emptyList()
     }
 
@@ -155,10 +155,10 @@ object PlayerController {
         mp = null
     }
 
-    private fun skip(dir: Int, manual: Boolean) {
+    private fun skip(dir: Int) {
         val q = queue.value
         if (q.isEmpty()) return
-        if (shuffle.value && manual && shuffleOrder.isNotEmpty()) {
+        if (shuffle.value && shuffleOrder.isNotEmpty()) {
             val cur = indexInQueue()
             val pos = shuffleOrder.indexOf(cur).takeIf { it >= 0 } ?: 0
             setIndex(shuffleOrder[(pos + dir + shuffleOrder.size) % shuffleOrder.size])
@@ -169,6 +169,15 @@ object PlayerController {
         startPlayback()
     }
 
+    private fun rebuildShuffle(start: Int) {
+        shuffleOrder = rebuildOrder(start)
+    }
+
+    private fun rebuildOrder(start: Int): List<Int> {
+        val rest = queue.value.indices.filter { it != start }
+        return listOf(start) + rest.shuffled()
+    }
+
     private fun onCompleted() {
         when (repeat.value) {
             RepeatMode.ONE -> {
@@ -177,20 +186,30 @@ object PlayerController {
                 playing.value = true
                 positionMs.value = 0
             }
-            RepeatMode.ALL -> skip(1, manual = false)
+            RepeatMode.ALL -> skip(1)
             RepeatMode.OFF -> {
-                val q = queue.value
-                val cur = indexInQueue()
-                if (cur >= q.lastIndex) {
+                if (isLastInOrder()) {
                     playing.value = false
                     stopTicker()
                     runCatching { mp?.seekTo(0) }
                     positionMs.value = 0
                 } else {
-                    skip(1, manual = false)
+                    skip(1)
                 }
             }
         }
+    }
+
+    /** True bila lagu saat ini adalah lagu terakhir urutan (shuffle atau linear). */
+    private fun isLastInOrder(): Boolean {
+        val q = queue.value
+        if (q.isEmpty()) return true
+        val cur = indexInQueue()
+        if (shuffle.value && shuffleOrder.isNotEmpty()) {
+            val pos = shuffleOrder.indexOf(cur).takeIf { it >= 0 } ?: 0
+            return pos >= shuffleOrder.lastIndex
+        }
+        return cur >= q.lastIndex
     }
 
     private fun startTicker() {

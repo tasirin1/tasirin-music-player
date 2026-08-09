@@ -39,6 +39,7 @@ fun MiniPlayer(onOpen: () -> Unit) {
     val playing by PlayerController.playing.collectAsState()
     val pos by PlayerController.positionMs.collectAsState()
     val dur by PlayerController.durationMs.collectAsState()
+    val queue by PlayerController.queue.collectAsState()
     val path = track?.path
     val art by produceState<Bitmap?>(null, path) { value = path?.let { ArtCache.load(it) } }
 
@@ -84,11 +85,15 @@ fun MiniPlayer(onOpen: () -> Unit) {
                     tint = MaterialTheme.colorScheme.primary
                 )
             }
-            IconButton(onClick = { PlayerController.next() }) {
+            IconButton(onClick = { PlayerController.next() }, enabled = queue.size > 1) {
                 Icon(
                     Icons.Filled.SkipNext,
                     contentDescription = "Berikutnya",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    tint = if (queue.size > 1) {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+                    }
                 )
             }
         }
