@@ -1,9 +1,6 @@
 package com.tasirin.musicplayer.ui
 
 import android.graphics.Bitmap
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -165,35 +162,46 @@ fun NowPlayingScreen() {
                         .aspectRatio(1f),
                     contentAlignment = Alignment.Center
                 ) {
-                    Box(
-                        Modifier
-                            .fillMaxSize()
-                            .scale(1.1f)
-                            .background(
-                                Brush.radialGradient(
-                                    listOf(
-                                        artColor?.copy(alpha = 0.3f) ?: Color.Transparent,
-                                        Color.Transparent
-                                    )
-                                ),
-                                shape = RoundedCornerShape(28.dp)
-                            )
-                    )
-                    Surface(
-                        shape = RoundedCornerShape(24.dp),
-                        color = surfaceVariant,
-                        shadowElevation = 28.dp,
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .clickable { showLyrics = true }
-                    ) {
-                        art?.let {
-                            Image(it.asImageBitmap(), null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
-                        } ?: Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            Icon(
-                                Icons.Filled.MusicNote, null,
-                                tint = secondary, modifier = Modifier.size(96.dp)
-                            )
+                    if (showLyrics) {
+                        LyricsCard(
+                            lyrics = lyricsText,
+                            loading = lyricsLoading,
+                            positionMs = pos,
+                            onRetry = { lyricsAttempt++ },
+                            onClose = { showLyrics = false },
+                            surfaceVariant = surfaceVariant
+                        )
+                    } else {
+                        Box(
+                            Modifier
+                                .fillMaxSize()
+                                .scale(1.1f)
+                                .background(
+                                    Brush.radialGradient(
+                                        listOf(
+                                            artColor?.copy(alpha = 0.3f) ?: Color.Transparent,
+                                            Color.Transparent
+                                        )
+                                    ),
+                                    shape = RoundedCornerShape(28.dp)
+                                )
+                        )
+                        Surface(
+                            shape = RoundedCornerShape(24.dp),
+                            color = surfaceVariant,
+                            shadowElevation = 28.dp,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .clickable { showLyrics = true }
+                        ) {
+                            art?.let {
+                                Image(it.asImageBitmap(), null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+                            } ?: Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                Icon(
+                                    Icons.Filled.MusicNote, null,
+                                    tint = secondary, modifier = Modifier.size(96.dp)
+                                )
+                            }
                         }
                     }
                 }
@@ -357,24 +365,6 @@ fun NowPlayingScreen() {
 
             Spacer(Modifier.height(24.dp))
         }
-
-        AnimatedVisibility(
-            visible = showLyrics,
-            enter = fadeIn(),
-            exit = fadeOut()
-        ) {
-            LyricsOverlay(
-                lyrics = lyricsText,
-                loading = lyricsLoading,
-                positionMs = pos,
-                art = art,
-                bg = bg,
-                title = current.title,
-                artist = current.artist,
-                onRetry = { lyricsAttempt++ },
-                onClose = { showLyrics = false }
-            )
-        }
     }
 }
 
@@ -399,92 +389,60 @@ private fun EmptyNowPlaying() {
     }
 }
 
-/** Overlay lirik penuh layar bergaya Oto Music: latar sampul redup + baris aktif di tengah. */
+/** Lirik tampil di area sampul: baris aktif sinkron ala Oto Music. */
 @Composable
-private fun LyricsOverlay(
+private fun LyricsCard(
     lyrics: String?,
     loading: Boolean,
     positionMs: Long,
-    art: Bitmap?,
-    bg: Color,
-    title: String,
-    artist: String,
     onRetry: () -> Unit,
-    onClose: () -> Unit
+    onClose: () -> Unit,
+    surfaceVariant: Color
 ) {
-    Box(Modifier.fillMaxSize().background(bg)) {
-        art?.let {
-            Image(
-                bitmap = it.asImageBitmap(),
-                contentDescription = null,
-                modifier = Modifier.fillMaxSize().alpha(0.16f),
-                contentScale = ContentScale.Crop
-            )
-        }
-        Box(
-            Modifier.fillMaxSize().background(
-                Brush.verticalGradient(
-                    listOf(
-                        bg.copy(alpha = 0.95f),
-                        bg.copy(alpha = 0.9f),
-                        bg.copy(alpha = 0.95f)
-                    )
-                )
-            )
-        )
-        Column(Modifier.fillMaxSize().padding(top = 10.dp)) {
+    Surface(
+        shape = RoundedCornerShape(24.dp),
+        color = surfaceVariant,
+        modifier = Modifier.fillMaxSize()
+    ) {
+        Column(Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
             Row(
-                Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
+                Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column(Modifier.weight(1f)) {
-                    Text(
-                        "Lirik",
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    if (artist.isNotBlank()) {
-                        Spacer(Modifier.height(2.dp))
-                        Text(
-                            "$title — $artist",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
-                }
-                IconButton(onClick = onClose) {
+                Text(
+                    "Lirik",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.weight(1f)
+                )
+                IconButton(onClick = onClose, modifier = Modifier.size(32.dp)) {
                     Icon(
                         Icons.Filled.Close, "Tutup",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(20.dp)
                     )
                 }
             }
             when {
                 loading -> Box(
                     Modifier
-                        .fillMaxWidth()
-                        .weight(1f),
+                        .weight(1f)
+                        .fillMaxWidth(),
                     contentAlignment = Alignment.Center
                 ) {
                     CircularProgressIndicator()
                 }
                 lyrics == null -> Box(
                     Modifier
-                        .fillMaxWidth()
-                        .weight(1f),
+                        .weight(1f)
+                        .fillMaxWidth(),
                     contentAlignment = Alignment.Center
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("Lirik tidak ditemukan", style = MaterialTheme.typography.titleMedium)
-                        Spacer(Modifier.height(6.dp))
                         Text(
-                            "Periksa koneksi internet lalu coba lagi",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            "Lirik tidak ditemukan",
+                            style = MaterialTheme.typography.bodyMedium,
+                            textAlign = TextAlign.Center
                         )
                         TextButton(onClick = onRetry) {
                             Text("Coba lagi")
@@ -494,29 +452,22 @@ private fun LyricsOverlay(
                 else -> {
                     val lines = remember(lyrics) { parseLrc(lyrics) }
                     if (lines.isEmpty()) {
-                        Column(
-                            Modifier
+                        Text(
+                            lyrics,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier
                                 .weight(1f)
                                 .verticalScroll(rememberScrollState())
-                                .padding(horizontal = 28.dp, vertical = 16.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            lyrics.lines().forEach { l ->
-                                Text(
-                                    l,
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    textAlign = TextAlign.Center,
-                                    modifier = Modifier.padding(vertical = 4.dp)
-                                )
-                            }
-                        }
+                                .padding(horizontal = 8.dp)
+                        )
                     } else {
                         SyncedLyrics(
                             lines,
                             positionMs,
                             Modifier.weight(1f).fillMaxWidth(),
-                            bg
+                            surfaceVariant
                         )
                     }
                 }
@@ -524,6 +475,7 @@ private fun LyricsOverlay(
         }
     }
 }
+
 
 /** Lirik sinkron ala Oto Music: baris aktif besar + aksen di tengah, lama redup, fade di tepi. */
 @Composable
@@ -553,15 +505,15 @@ private fun SyncedLyrics(
                 Text(
                     line.text.ifBlank { "♪" },
                     style = if (active) {
-                        MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.SemiBold)
+                        MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold)
                     } else {
-                        MaterialTheme.typography.titleMedium
+                        MaterialTheme.typography.bodyLarge
                     },
                     color = if (active) Accent else MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 28.dp, vertical = 10.dp)
+                        .padding(horizontal = 16.dp, vertical = 6.dp)
                         .alpha(
                             when {
                                 active -> 1f
@@ -572,18 +524,18 @@ private fun SyncedLyrics(
                 )
             }
         }
-        val fade = bg.copy(alpha = 0.95f)
+        val fade = bg
         Box(
             Modifier
                 .fillMaxWidth()
-                .height(56.dp)
+                .height(40.dp)
                 .align(Alignment.TopCenter)
                 .background(Brush.verticalGradient(listOf(fade, Color.Transparent)))
         )
         Box(
             Modifier
                 .fillMaxWidth()
-                .height(56.dp)
+                .height(40.dp)
                 .align(Alignment.BottomCenter)
                 .background(Brush.verticalGradient(listOf(Color.Transparent, fade)))
         )
