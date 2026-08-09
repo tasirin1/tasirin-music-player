@@ -42,7 +42,7 @@ fun MiniPlayer(onOpen: () -> Unit) {
     val path = track?.path
     val art by produceState<Bitmap?>(null, path) { value = path?.let { ArtCache.load(it) } }
 
-    if (track == null) return
+    val current = track ?: return
 
     Column {
         LinearProgressIndicator(
@@ -64,13 +64,13 @@ fun MiniPlayer(onOpen: () -> Unit) {
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
                 Text(
-                    track.title,
+                    current.title,
                     style = MaterialTheme.typography.titleMedium,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(
-                    track.artist.ifBlank { track.album },
+                    current.artist.ifBlank { current.album },
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,

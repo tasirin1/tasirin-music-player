@@ -77,7 +77,8 @@ fun NowPlayingScreen() {
     val surfaceVariant = MaterialTheme.colorScheme.surfaceVariant
     val secondary = MaterialTheme.colorScheme.onSurfaceVariant
 
-    if (track == null) {
+    val current = track
+    if (current == null) {
         EmptyNowPlaying()
         return
     }
@@ -126,22 +127,20 @@ fun NowPlayingScreen() {
                     shadowElevation = 28.dp,
                     modifier = Modifier.size(300.dp)
                 ) {
-                    if (art != null) {
-                        Image(art.asImageBitmap(), null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
-                    } else {
-                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            Icon(
-                                Icons.Filled.MusicNote, null,
-                                tint = secondary, modifier = Modifier.size(96.dp)
-                            )
-                        }
+                    art?.let {
+                        Image(it.asImageBitmap(), null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+                    } ?: Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Icon(
+                            Icons.Filled.MusicNote, null,
+                            tint = secondary, modifier = Modifier.size(96.dp)
+                        )
                     }
                 }
             }
 
             Spacer(Modifier.height(28.dp))
             Text(
-                track.title,
+                current.title,
                 style = MaterialTheme.typography.headlineMedium,
                 textAlign = TextAlign.Center,
                 maxLines = 2,
@@ -150,7 +149,7 @@ fun NowPlayingScreen() {
             )
             Spacer(Modifier.height(6.dp))
             Text(
-                track.artist,
+                current.artist,
                 style = MaterialTheme.typography.titleMedium,
                 color = secondary,
                 textAlign = TextAlign.Center,
@@ -158,10 +157,10 @@ fun NowPlayingScreen() {
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.fillMaxWidth()
             )
-            if (track.album.isNotBlank()) {
+            if (current.album.isNotBlank()) {
                 Spacer(Modifier.height(2.dp))
                 Text(
-                    track.album,
+                    current.album,
                     style = MaterialTheme.typography.bodySmall,
                     color = secondary,
                     textAlign = TextAlign.Center,
@@ -251,7 +250,7 @@ fun NowPlayingScreen() {
             Spacer(Modifier.height(28.dp))
             Text("Selanjutnya", style = MaterialTheme.typography.titleMedium)
             Spacer(Modifier.height(4.dp))
-            val rest = queue.dropWhile { it.path != track.path }.drop(1)
+            val rest = queue.dropWhile { it.path != current.path }.drop(1)
             val upNext = (if (rest.isNotEmpty()) rest else queue).take(5)
             upNext.forEach { t ->
                 NextRow(t) {
@@ -265,8 +264,8 @@ fun NowPlayingScreen() {
 }
 
 @Composable
-private fun NextRow(track: Track, onClick: () -> Unit) {
-    val art by produceState<Bitmap?>(null, track.path) { value = ArtCache.load(track.path) }
+private fun NextRow(current: Track, onClick: () -> Unit) {
+    val art by produceState<Bitmap?>(null, current.path) { value = ArtCache.load(current.path) }
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -278,13 +277,13 @@ private fun NextRow(track: Track, onClick: () -> Unit) {
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
             Text(
-                track.title,
+                current.title,
                 style = MaterialTheme.typography.bodyMedium,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
             Text(
-                track.artist,
+                current.artist,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
@@ -292,7 +291,7 @@ private fun NextRow(track: Track, onClick: () -> Unit) {
             )
         }
         Text(
-            track.durationLabel,
+            current.durationLabel,
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
