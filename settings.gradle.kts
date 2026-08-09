@@ -12,5 +12,5 @@ dependencyResolutionManagement {
         mavenCentral()
     }
 }
-rootProject.name = 'TasirinMusicPlayer'
-include ':app'
+rootProject.name = "TasirinMusicPlayer"
+include(":app")

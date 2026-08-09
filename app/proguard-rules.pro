@@ -1,4 +1,2 @@
-# Service & komponen yang dipanggil via intent/refleksi sistem.
--keep class com.tasirin.musicplayer.MusicService { *; }
--keep class com.tasirin.musicplayer.RemoteServer { *; }
--keepclassmembers class * extends android.app.Service { *; }
+# Kelas JNI — nama metode native tidak boleh diobfuscate
+-keep class com.tasirin.musicplayer.MusicCore { *; }

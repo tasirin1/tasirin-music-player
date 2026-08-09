@@ -1,9 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Tasirin Musik Player</string>
-    <string name="folder_hint">Folder musik (mis. /sdcard/Music)</string>
-    <string name="scan">Pindai</string>
-    <string name="no_track">—</string>
-    <string name="remote_hint">Remote web: tekan tombol Remote untuk nyalakan</string>
-    <string name="empty_hint">Belum ada lagu.\nIsi folder musik lalu tekan Pindai.</string>
+    <string name="app_name">Tasirin Musik</string>
 </resources>
