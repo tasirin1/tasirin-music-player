@@ -48,7 +48,7 @@ fun MusicApp(vm: LibraryViewModel = viewModel()) {
         else -> isSystemInDarkTheme()
     }
 
-    var tab by rememberSaveable { mutableStateOf(0) }
+    var tab by rememberSaveable { mutableStateOf(1) }
     var albumOpen by rememberSaveable { mutableStateOf(false) }
     var albumName by rememberSaveable { mutableStateOf<String?>(null) }
     var albumArtist by rememberSaveable { mutableStateOf("") }
@@ -65,27 +65,27 @@ fun MusicApp(vm: LibraryViewModel = viewModel()) {
             containerColor = MaterialTheme.colorScheme.background,
             bottomBar = {
                 Column {
-                    if (tab != 2) {
-                        MiniPlayer(onOpen = { tab = 2; albumOpen = false; albumName = null })
+                    if (tab != 0) {
+                        MiniPlayer(onOpen = { tab = 0; albumOpen = false; albumName = null })
                     }
                     NavigationBar(containerColor = MaterialTheme.colorScheme.surface) {
                         NavigationBarItem(
                             selected = tab == 0,
                             onClick = { tab = 0; albumOpen = false; albumName = null },
-                            icon = { Icon(Icons.Filled.LibraryMusic, contentDescription = null) },
-                            label = { Text("Perpustakaan") }
+                            icon = { Icon(Icons.Filled.PlayCircle, contentDescription = null) },
+                            label = { Text("Sekarang") }
                         )
                         NavigationBarItem(
                             selected = tab == 1,
                             onClick = { tab = 1; albumOpen = false; albumName = null },
-                            icon = { Icon(Icons.Filled.Album, contentDescription = null) },
-                            label = { Text("Album") }
+                            icon = { Icon(Icons.Filled.LibraryMusic, contentDescription = null) },
+                            label = { Text("Perpustakaan") }
                         )
                         NavigationBarItem(
                             selected = tab == 2,
                             onClick = { tab = 2; albumOpen = false; albumName = null },
-                            icon = { Icon(Icons.Filled.PlayCircle, contentDescription = null) },
-                            label = { Text("Sekarang") }
+                            icon = { Icon(Icons.Filled.Album, contentDescription = null) },
+                            label = { Text("Album") }
                         )
                         NavigationBarItem(
                             selected = tab == 3,
@@ -109,14 +109,15 @@ fun MusicApp(vm: LibraryViewModel = viewModel()) {
                             PlayerController.play(list, i)
                         }
                     )
-                    tab == 0 -> LibraryScreen(
+                    tab == 0 -> NowPlayingScreen()
+                    tab == 1 -> LibraryScreen(
                         vm = vm,
                         onPlay = { list, i ->
                             PlayerController.play(list, i)
-                            tab = 2
+                            tab = 0
                         }
                     )
-                    tab == 1 -> AlbumsScreen(
+                    tab == 2 -> AlbumsScreen(
                         vm = vm,
                         onOpenAlbum = { a, ar ->
                             albumName = a
@@ -124,7 +125,6 @@ fun MusicApp(vm: LibraryViewModel = viewModel()) {
                             albumOpen = true
                         }
                     )
-                    tab == 2 -> NowPlayingScreen()
                     else -> SettingsScreen(
                         vm = vm,
                         themeMode = themeMode,

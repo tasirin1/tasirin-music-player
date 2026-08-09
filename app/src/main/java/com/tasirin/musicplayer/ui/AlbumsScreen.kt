@@ -26,6 +26,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -44,16 +45,18 @@ fun AlbumsScreen(
     onOpenAlbum: (album: String, artist: String) -> Unit
 ) {
     val tracks by vm.tracks.collectAsState()
-    val albums = tracks
-        .groupBy { it.album.ifBlank { "<Tanpa Album>" } }
-        .map { (name, list) ->
-            AlbumItem(
-                name = name,
-                artist = list.firstOrNull { it.artist.isNotBlank() }?.artist.orEmpty(),
-                tracks = list
-            )
-        }
-        .sortedBy { it.name.lowercase() }
+    val albums = remember(tracks) {
+        tracks
+            .groupBy { it.album.ifBlank { "<Tanpa Album>" } }
+            .map { (name, list) ->
+                AlbumItem(
+                    name = name,
+                    artist = list.firstOrNull { it.artist.isNotBlank() }?.artist.orEmpty(),
+                    tracks = list
+                )
+            }
+            .sortedBy { it.name.lowercase() }
+    }
 
     Column(Modifier.fillMaxSize()) {
         Text(

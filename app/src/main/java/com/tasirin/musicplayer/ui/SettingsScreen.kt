@@ -199,10 +199,6 @@ fun SettingsScreen(
                 }
             }
         }
-        Spacer(Modifier.height(8.dp))
-        TextButton(onClick = { vm.clear() }) {
-            Text("Hapus pustaka", color = MaterialTheme.colorScheme.error)
-        }
         Spacer(Modifier.height(24.dp))
     }
 }

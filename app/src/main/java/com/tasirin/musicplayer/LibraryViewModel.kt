@@ -90,12 +90,6 @@ class LibraryViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun clear() {
-        _tracks.value = emptyList()
-        prefs.edit().remove("library").apply()
-        _status.value = ""
-    }
-
     private fun loadCached() {
         val raw = prefs.getString("library", null) ?: return
         val list = runCatching { parseTracks(raw) }.getOrDefault(emptyList())
