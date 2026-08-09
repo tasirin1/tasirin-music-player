@@ -1,9 +1,9 @@
 package com.tasirin.musicplayer
 
 import android.media.browse.MediaBrowser.MediaItem
+import android.media.MediaDescription
 import android.os.Bundle
-import android.support.v4.media.MediaBrowserServiceCompat
-import android.support.v4.media.MediaDescriptionCompat
+import androidx.media.MediaBrowserServiceCompat
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -48,7 +48,7 @@ class MusicBrowserService : MediaBrowserServiceCompat() {
             result.sendResult(
                 tracks.mapIndexed { i, t ->
                     MediaItem(
-                        MediaDescriptionCompat.Builder()
+                        MediaDescription.Builder()
                             .setMediaId(t.path)
                             .setTitle(t.title)
                             .setSubtitle(t.artist.ifBlank { t.album })
