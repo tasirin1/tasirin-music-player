@@ -16,6 +16,8 @@ android {
         targetSdk = 35
         versionCode = buildNumber
         versionName = "1.0"
+        // Hanya butuh bahasa Indonesia (+ Inggris cadangan): resource locale lain dibuang.
+        resConfigs("id", "en")
     }
 
     signingConfigs {
@@ -69,7 +71,6 @@ dependencies {
 
     // Lifecycle + ViewModel
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.7.0")
-    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.7.0")
 
     // MediaSession + notifikasi media (MediaStyle)
     implementation("androidx.media:media:1.7.0")
