@@ -6,9 +6,9 @@ iklan.
 
 ## Fitur
 
-- 🎨 **Tampilan ala Apple Music**: perpustakaan dengan pencarian, tab Album
-  (kisi album), layar "Sekarang Diputar" dengan sampul besar + latar berwarna,
-  mini player, dan daftar "Selanjutnya".
+- 🎨 **Tampilan ala Apple Music**: tab Sekarang Diputar (sampul besar + latar
+  berwarna), perpustakaan dengan pencarian, tab Album (kisi album), dan
+  mini player.
 - 🎤 **Lirik ala Oto Music**: ketuk sampul untuk lirik — lirik tertanam
   (USLT/LRC) tampil sinkron dengan highlight baris aktif, atau dicari online
   lewat LRCLIB bila tidak tertanam.
@@ -20,7 +20,7 @@ iklan.
 - 🖼️ Album art diekstrak dari tag, di-cache ke disk + memori.
 - ▶️ Pemutaran latar: notifikasi media (play/pause/next/prev), MediaSession,
   tombol media perangkat.
-- 🎛️ Kontrol lengkap: acak, ulang (mati/semua/satu), seek bar, antrean.
+- 🎛️ Kontrol lengkap: acak, ulang (mati/semua/satu), seek bar, lirik sinkron.
 - 🌓 Tema sistem/gelap/terang.
 - 📱 Android 10+ (minSdk 29), APK kecil (R8 + resource shrinking).
 
@@ -39,10 +39,10 @@ rust/music-core/          Inti Rust (cdylib → libmusiccore.so)
   src/lib.rs              Bridge JNI (com.tasirin.musicplayer.MusicCore)
   src/scanner.rs          Pemindaian folder paralel (multi-thread)
   src/meta.rs             Metadata + album art (lofty)
-app/src/main/             UI Compose + service
-  java/.../ui/            Perpustakaan, Sekarang Diputar, Pengaturan, MiniPlayer
-  java/.../MusicService   Notifikasi media + MediaSession (latar)
-  java/.../PlayerController  Kontrol pemutaran (MediaPlayer Android)
+app/src/main/kotlin/      UI Compose + service (100% Kotlin)
+  .../ui/                 Sekarang Diputar, Perpustakaan, Album, Pengaturan
+  .../MusicService        Notifikasi media + MediaSession (latar)
+  .../PlayerController    Kontrol pemutaran (MediaPlayer Android)
 ```
 
 Alasan MediaPlayer (bukan decode Rust): decode hardware = hemat baterai dan
