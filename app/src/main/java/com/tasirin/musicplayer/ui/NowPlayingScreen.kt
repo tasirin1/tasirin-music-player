@@ -1,6 +1,8 @@
 package com.tasirin.musicplayer.ui
 
 import android.graphics.Bitmap
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -9,6 +11,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -32,15 +35,17 @@ import androidx.compose.material.icons.filled.RepeatOne
 import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
+import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Slider
-import androidx.compose.material3.TextButton
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -53,10 +58,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -68,7 +75,7 @@ import com.tasirin.musicplayer.Track
 import com.tasirin.musicplayer.ui.components.Artwork
 import com.tasirin.musicplayer.ui.theme.Accent
 
-/** Layar "Sekarang Diputar" — sampul besar (ketuk → lirik), kontrol, tombol album. */
+/** Layar "Sekarang Diputar" — sampul besar, lirik, kontrol, dan antrean. */
 @Composable
 fun NowPlayingScreen(onOpenAlbum: () -> Unit) {
     val track by PlayerController.currentTrack.collectAsState()
@@ -107,11 +114,25 @@ fun NowPlayingScreen(onOpenAlbum: () -> Unit) {
         }
     }
 
+    val artColor = remember(art) { art?.let { averageColor(it) } }
+    val artScale by animateFloatAsState(
+        targetValue = if (art != null) 1f else 0.94f,
+        animationSpec = tween(450),
+        label = "artScale"
+    )
+    val artAlpha by animateFloatAsState(
+        targetValue = if (art != null) 1f else 0.5f,
+        animationSpec = tween(350),
+        label = "artAlpha"
+    )
+
     val shownPos = dragPos ?: pos.toFloat()
     val maxPos = dur.coerceAtLeast(1L).toFloat()
+    val qIndex = queue.indexOfFirst { it.path == current.path }
+    val remaining = if (qIndex >= 0) (queue.size - qIndex - 1).coerceAtLeast(0) else queue.size
 
     Box(Modifier.fillMaxSize().background(bg)) {
-        // Latar: sampul melebar + redup agar teks terbaca
+        // Latar: sampul melebar + gradasi dari warna dominan sampul
         art?.let {
             Image(
                 bitmap = it.asImageBitmap(),
@@ -123,17 +144,16 @@ fun NowPlayingScreen(onOpenAlbum: () -> Unit) {
         Box(
             Modifier.fillMaxSize().background(
                 Brush.verticalGradient(
-                    listOf(Color.Transparent, bg.copy(alpha = 0.6f), bg)
+                    listOf(
+                        artColor?.copy(alpha = 0.4f) ?: Color.Transparent,
+                        bg.copy(alpha = 0.55f),
+                        bg
+                    )
                 )
             )
         )
 
-        Column(
-            Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 24.dp)
-        ) {
+        Column(Modifier.fillMaxSize().padding(horizontal = 24.dp)) {
             Spacer(Modifier.height(12.dp))
             Text(
                 "Sekarang Diputar",
@@ -142,9 +162,15 @@ fun NowPlayingScreen(onOpenAlbum: () -> Unit) {
                 textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth()
             )
-            Spacer(Modifier.height(28.dp))
 
-            Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+            // Sampul responsif + glow
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .weight(1.25f)
+                    .clipToBounds(),
+                contentAlignment = Alignment.Center
+            ) {
                 if (showLyrics) {
                     LyricsCard(
                         lyrics = lyricsText,
@@ -156,27 +182,53 @@ fun NowPlayingScreen(onOpenAlbum: () -> Unit) {
                         surfaceVariant = surfaceVariant
                     )
                 } else {
-                    Surface(
-                        shape = RoundedCornerShape(24.dp),
-                        color = surfaceVariant,
-                        shadowElevation = 28.dp,
-                        modifier = Modifier
-                            .size(300.dp)
-                            .clickable { showLyrics = true }
+                    Box(
+                        Modifier
+                            .fillMaxWidth(0.85f)
+                            .aspectRatio(1f),
+                        contentAlignment = Alignment.Center
                     ) {
-                        art?.let {
-                            Image(it.asImageBitmap(), null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
-                        } ?: Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            Icon(
-                                Icons.Filled.MusicNote, null,
-                                tint = secondary, modifier = Modifier.size(96.dp)
-                            )
+                        Box(
+                            Modifier
+                                .fillMaxSize()
+                                .scale(1.1f)
+                                .background(
+                                    Brush.radialGradient(
+                                        listOf(
+                                            artColor?.copy(alpha = 0.3f) ?: Color.Transparent,
+                                            Color.Transparent
+                                        )
+                                    ),
+                                    shape = RoundedCornerShape(28.dp)
+                                )
+                        )
+                        Surface(
+                            shape = RoundedCornerShape(24.dp),
+                            color = surfaceVariant,
+                            shadowElevation = 28.dp,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .graphicsLayer {
+                                    alpha = artAlpha
+                                    scaleX = artScale
+                                    scaleY = artScale
+                                }
+                                .clickable { showLyrics = true }
+                        ) {
+                            art?.let {
+                                Image(it.asImageBitmap(), null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+                            } ?: Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                Icon(
+                                    Icons.Filled.MusicNote, null,
+                                    tint = secondary, modifier = Modifier.size(96.dp)
+                                )
+                            }
                         }
                     }
                 }
             }
             if (!showLyrics) {
-                Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.height(8.dp))
                 Text(
                     "Ketuk sampul untuk lirik",
                     style = MaterialTheme.typography.bodySmall,
@@ -186,7 +238,7 @@ fun NowPlayingScreen(onOpenAlbum: () -> Unit) {
                 )
             }
 
-            Spacer(Modifier.height(28.dp))
+            Spacer(Modifier.height(16.dp))
             Text(
                 current.title,
                 style = MaterialTheme.typography.headlineMedium,
@@ -195,7 +247,7 @@ fun NowPlayingScreen(onOpenAlbum: () -> Unit) {
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.fillMaxWidth()
             )
-            Spacer(Modifier.height(6.dp))
+            Spacer(Modifier.height(4.dp))
             Text(
                 current.artist,
                 style = MaterialTheme.typography.titleMedium,
@@ -216,7 +268,28 @@ fun NowPlayingScreen(onOpenAlbum: () -> Unit) {
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.fillMaxWidth()
                 )
-                Spacer(Modifier.height(12.dp))
+            }
+            val meta = listOfNotNull(
+                current.genre.takeIf { it.isNotBlank() },
+                current.year.takeIf { it > 0 }?.toString(),
+                current.trackNum.takeIf { it > 0 }?.let { "Lagu $it" }
+            ).joinToString(" · ")
+            val queueLabel = if (qIndex >= 0 && queue.size > 1) "${qIndex + 1} dari ${queue.size}" else null
+            val infoLine = listOfNotNull(meta.takeIf { it.isNotBlank() }, queueLabel).joinToString(" · ")
+            if (infoLine.isNotBlank()) {
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    infoLine,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = secondary,
+                    textAlign = TextAlign.Center,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+            if (current.album.isNotBlank()) {
+                Spacer(Modifier.height(10.dp))
                 OutlinedButton(
                     onClick = onOpenAlbum,
                     modifier = Modifier.align(Alignment.CenterHorizontally)
@@ -225,7 +298,7 @@ fun NowPlayingScreen(onOpenAlbum: () -> Unit) {
                 }
             }
 
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(16.dp))
             Slider(
                 value = shownPos.coerceIn(0f, maxPos),
                 onValueChange = { dragPos = it },
@@ -233,22 +306,30 @@ fun NowPlayingScreen(onOpenAlbum: () -> Unit) {
                     dragPos?.let { PlayerController.seekTo(it.toLong()) }
                     dragPos = null
                 },
-                valueRange = 0f..maxPos
+                valueRange = 0f..maxPos,
+                colors = SliderDefaults.colors(
+                    thumbColor = Accent,
+                    activeTrackColor = Accent,
+                    inactiveTrackColor = surfaceVariant
+                )
             )
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Text(
                     Track.formatMs(shownPos.toLong()),
                     style = MaterialTheme.typography.bodySmall,
-                    color = secondary
+                    color = secondary,
+                    fontFeatureSettings = "tnum"
                 )
                 Text(
-                    Track.formatMs(dur),
+                    "-" + Track.formatMs((dur - shownPos.toLong()).coerceAtLeast(0)),
                     style = MaterialTheme.typography.bodySmall,
-                    color = secondary
+                    color = secondary,
+                    fontFeatureSettings = "tnum"
                 )
             }
 
-            Spacer(Modifier.height(12.dp))
+            // Kontrol: baris atas (acak/ulang), baris tengah (prev/play/next)
+            Spacer(Modifier.height(8.dp))
             Row(
                 Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -260,9 +341,34 @@ fun NowPlayingScreen(onOpenAlbum: () -> Unit) {
                         tint = if (shuffle) Accent else secondary
                     )
                 }
-                IconButton(onClick = { PlayerController.prev() }) {
-                    Icon(Icons.Filled.SkipPrevious, "Sebelumnya", tint = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.size(40.dp))
+                IconButton(onClick = {
+                    PlayerController.setRepeat(
+                        when (repeat) {
+                            PlayerController.RepeatMode.OFF -> PlayerController.RepeatMode.ALL
+                            PlayerController.RepeatMode.ALL -> PlayerController.RepeatMode.ONE
+                            PlayerController.RepeatMode.ONE -> PlayerController.RepeatMode.OFF
+                        }
+                    )
+                }) {
+                    Icon(
+                        if (repeat == PlayerController.RepeatMode.ONE) Icons.Filled.RepeatOne else Icons.Filled.Repeat,
+                        "Ulang",
+                        tint = if (repeat != PlayerController.RepeatMode.OFF) Accent else secondary
+                    )
+                }
+            }
+            val canSkip = queue.size > 1
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(onClick = { PlayerController.prev() }, enabled = canSkip) {
+                    Icon(
+                        Icons.Filled.SkipPrevious, "Sebelumnya",
+                        tint = if (canSkip) MaterialTheme.colorScheme.onSurface else secondary.copy(alpha = 0.5f),
+                        modifier = Modifier.size(40.dp)
+                    )
                 }
                 Surface(
                     shape = CircleShape,
@@ -281,49 +387,58 @@ fun NowPlayingScreen(onOpenAlbum: () -> Unit) {
                         )
                     }
                 }
-                IconButton(onClick = { PlayerController.next() }) {
-                    Icon(Icons.Filled.SkipNext, "Berikutnya", tint = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.size(40.dp))
-                }
-                IconButton(onClick = {
-                    PlayerController.setRepeat(
-                        when (repeat) {
-                            PlayerController.RepeatMode.OFF -> PlayerController.RepeatMode.ALL
-                            PlayerController.RepeatMode.ALL -> PlayerController.RepeatMode.ONE
-                            PlayerController.RepeatMode.ONE -> PlayerController.RepeatMode.OFF
-                        }
-                    )
-                }) {
+                IconButton(onClick = { PlayerController.next() }, enabled = canSkip) {
                     Icon(
-                        if (repeat == PlayerController.RepeatMode.ONE) Icons.Filled.RepeatOne else Icons.Filled.Repeat,
-                        "Ulang",
-                        tint = if (repeat != PlayerController.RepeatMode.OFF) Accent else secondary
+                        Icons.Filled.SkipNext, "Berikutnya",
+                        tint = if (canSkip) MaterialTheme.colorScheme.onSurface else secondary.copy(alpha = 0.5f),
+                        modifier = Modifier.size(40.dp)
                     )
                 }
             }
 
-            Spacer(Modifier.height(28.dp))
-            Text("Selanjutnya", style = MaterialTheme.typography.titleMedium)
+            // Antrean "Selanjutnya"
+            Spacer(Modifier.height(16.dp))
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    "Selanjutnya",
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.weight(1f)
+                )
+                Text(
+                    "$remaining lagu berikutnya",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = secondary
+                )
+            }
             Spacer(Modifier.height(4.dp))
-            val rest = queue.dropWhile { it.path != current.path }.drop(1)
-            val upNext = (if (rest.isNotEmpty()) rest else queue).take(5)
-            upNext.forEach { t ->
-                NextRow(t) {
-                    val idx = queue.indexOfFirst { it.path == t.path }
-                    if (idx >= 0) PlayerController.play(queue, idx)
+            val start = (qIndex - 1).coerceAtLeast(0)
+            val window = queue.drop(start).take(8)
+            LazyColumn(Modifier.fillMaxWidth().weight(1f)) {
+                itemsIndexed(window) { i, t ->
+                    val abs = start + i
+                    NextRow(
+                        track = t,
+                        active = abs == qIndex,
+                        played = abs < qIndex,
+                        onClick = {
+                            val idx = queue.indexOfFirst { it.path == t.path }
+                            if (idx >= 0) PlayerController.play(queue, idx)
+                        }
+                    )
                 }
             }
-            Spacer(Modifier.height(32.dp))
+            Spacer(Modifier.height(12.dp))
         }
     }
 }
 
 @Composable
-private fun NextRow(current: Track, onClick: () -> Unit) {
-    val art by produceState<Bitmap?>(null, current.path) { value = ArtCache.load(current.path) }
+private fun NextRow(track: Track, active: Boolean, played: Boolean, onClick: () -> Unit) {
+    val art by produceState<Bitmap?>(null, track.path) { value = ArtCache.load(track.path) }
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .alpha(if (played) 0.45f else 1f)
             .clickable(onClick = onClick)
             .padding(vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -332,21 +447,26 @@ private fun NextRow(current: Track, onClick: () -> Unit) {
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
             Text(
-                current.title,
-                style = MaterialTheme.typography.bodyMedium,
+                track.title,
+                style = if (active) MaterialTheme.typography.titleMedium else MaterialTheme.typography.bodyMedium,
+                color = if (active) Accent else MaterialTheme.colorScheme.onSurface,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
             Text(
-                current.artist,
+                track.artist,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
         }
+        if (active) {
+            Icon(Icons.Filled.VolumeUp, null, tint = Accent, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(8.dp))
+        }
         Text(
-            current.durationLabel,
+            track.durationLabel,
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -374,7 +494,6 @@ private fun EmptyNowPlaying() {
     }
 }
 
-
 @Composable
 private fun LyricsCard(
     lyrics: String?,
@@ -389,8 +508,8 @@ private fun LyricsCard(
         shape = RoundedCornerShape(24.dp),
         color = surfaceVariant,
         modifier = Modifier
-            .fillMaxWidth()
-            .height(300.dp)
+            .fillMaxWidth(0.85f)
+            .aspectRatio(1f)
     ) {
         Column(Modifier.padding(16.dp)) {
             Row(
@@ -444,7 +563,7 @@ private fun LyricsCard(
     }
 }
 
-/** Lirik sinkron ala Oto Music: baris aktif menyala, sisanya redup, auto-scroll. */
+/** Lirik sinkron: baris aktif menyala, sisanya redup, auto-scroll. */
 @Composable
 private fun SyncedLyrics(lines: List<LyricLine>, positionMs: Long, modifier: Modifier) {
     val state = rememberLazyListState()
@@ -502,4 +621,23 @@ private fun currentLineIndex(lines: List<LyricLine>, posMs: Long): Int {
         if (lines[i].timeMs <= posMs) idx = i else break
     }
     return idx
+}
+
+/** Warna rata-rata sampul (untuk gradasi latar) — sampel kecil agar cepat. */
+private fun averageColor(bmp: Bitmap): Color {
+    val s = Bitmap.createScaledBitmap(bmp, 8, 8, true)
+    var r = 0
+    var g = 0
+    var b = 0
+    for (x in 0 until 8) {
+        for (y in 0 until 8) {
+            val c = s.getPixel(x, y)
+            r += (c shr 16) and 0xFF
+            g += (c shr 8) and 0xFF
+            b += c and 0xFF
+        }
+    }
+    s.recycle()
+    val n = 64
+    return Color(r / n, g / n, b / n)
 }
