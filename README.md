@@ -9,6 +9,8 @@ iklan.
 - 🎨 **Tampilan ala Apple Music**: perpustakaan dengan pencarian, layar
   "Sekarang Diputar" dengan sampul besar + latar berwarna, mini player, dan
   daftar "Selanjutnya".
+- 📁 **Pilih folder lewat picker sistem** (SAF): tekan "Folder musik" di
+  Pengaturan, pilih folder lewat dialog sistem, lalu otomatis dipindai.
 - 🦀 **Inti Rust** (`libmusiccore.so` via JNI): pemindaian pustaka paralel dan
   parsing metadata memakai crate [`lofty`](https://crates.io/crates/lofty)
   (ID3v2, MP4, FLAC, Vorbis, APE, WMA, dll) — cepat & hemat memori.
@@ -23,8 +25,8 @@ iklan.
 
 1. Pasang APK dari [GitHub Release](https://github.com/tasirin1/tasirin-music-player/releases).
 2. Izinkan akses audio (Android 13+ meminta `READ_MEDIA_AUDIO`).
-3. Folder default `/storage/emulated/0/Music` — bisa diubah di **Pengaturan**,
-   lalu tekan **Pindai folder**.
+3. Di **Pengaturan**, tekan "Folder musik" untuk memilih folder lewat picker
+   sistem (SAF) — pemindaian otomatis berjalan setelah folder dipilih.
 4. Pilih lagu di Perpustakaan; layar "Sekarang Diputar" terbuka otomatis.
 
 ## Arsitektur
@@ -49,7 +51,7 @@ bersifat *compute*: pemindaian & metadata.
 **Wajib: build hanya lewat GitHub Actions** (jangan build lokal). Commit ke
 `main` → workflow otomatis:
 
-1. Compile inti Rust untuk `arm64-v8a`, `armeabi-v7a`, `x86_64` (cargo-ndk).
+1. Compile inti Rust untuk `arm64-v8a` & `armeabi-v7a` (cargo-ndk).
 2. `gradle testDebugUnitTest assembleRelease` dengan keystore resmi Tasirin.
 3. Upload APK ke Release `v1.0` (versionCode = run number CI).
 

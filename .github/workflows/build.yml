@@ -41,14 +41,14 @@ jobs:
     - name: Set up Rust
       uses: dtolnay/rust-toolchain@stable
       with:
-        targets: aarch64-linux-android,armv7-linux-androideabi,x86_64-linux-android
+        targets: aarch64-linux-android,armv7-linux-androideabi
 
     - name: Install cargo-ndk
       run: cargo install cargo-ndk --locked
 
     - name: Build inti Rust (JNI .so)
       run: |
-        cargo ndk -t arm64-v8a -t armeabi-v7a -t x86_64 \
+        cargo ndk -t arm64-v8a -t armeabi-v7a \
           -o app/src/main/jniLibs build --release \
           --manifest-path rust/music-core/Cargo.toml
 
@@ -88,5 +88,5 @@ jobs:
         gh release delete "v1.0" --yes --cleanup-tag || true
         gh release create "v1.0" "$OUT" "$OUT.sha256" \
           --title "Tasirin Musik v1.0 (build ${CODE})" \
-          --notes "Pemutar musik lokal dengan inti Rust. APK ditandatangani keystore resmi Tasirin — update-over-install mulus." \
+          --notes "Pemutar musik lokal dengan inti Rust, picker folder sistem (SAF). APK ditandatangani keystore resmi Tasirin — update-over-install mulus." \
           --latest
