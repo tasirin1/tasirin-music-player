@@ -9,6 +9,7 @@ class MusicApp : Application() {
         ArtCache.init(this)
         LyricsLoader.init(this)
         FavoritesStore.init(this)
+        MediaSessionManager.init(this)
         PlayerController.attach(this)
         PlayerController.restoreLastSession()
     }

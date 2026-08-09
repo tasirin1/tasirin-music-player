@@ -18,8 +18,10 @@ iklan.
   parsing metadata memakai crate [`lofty`](https://crates.io/crates/lofty)
   (ID3v2, MP4, FLAC, Vorbis, APE, WMA, dll) — cepat & hemat memori.
 - 🖼️ Album art diekstrak dari tag, di-cache ke disk + memori.
-- ▶️ Pemutaran latar: notifikasi media (play/pause/next/prev), MediaSession,
-  tombol media perangkat.
+- ▶️ Pemutaran latar lengkap: notifikasi media dengan artwork
+  (play/pause/next/prev), kontrol di **lock screen**, tombol media headset
+  (`MediaButtonReceiver`), dan tampil di **Android Auto** lewat
+  `MediaBrowserServiceCompat` (browse pustaka + putar dari media id).
 - 🎛️ Kontrol lengkap: acak, ulang (mati/semua/satu), seek bar, lirik sinkron.
 - 🌓 Tema sistem/gelap/terang.
 - 📱 Android 10+ (minSdk 29), APK kecil (R8 + resource shrinking).
@@ -41,7 +43,10 @@ rust/music-core/          Inti Rust (cdylib → libmusiccore.so)
   src/meta.rs             Metadata + album art (lofty)
 app/src/main/kotlin/      UI Compose + service (100% Kotlin)
   .../ui/                 Sekarang Diputar, Perpustakaan, Album, Pengaturan
-  .../MusicService        Notifikasi media + MediaSession (latar)
+  .../MusicService        Notifikasi media (latar)
+  .../MediaSessionManager MediaSession tunggal: headset, lock screen, Android Auto
+  .../MusicBrowserService Browser pustaka untuk Android Auto
+  .../MediaLibrary        Akses pustaka via MediaStore (AA & resolusi media id)
   .../PlayerController    Kontrol pemutaran (MediaPlayer Android)
 ```
 
