@@ -1,5 +1,9 @@
 package com.tasirin.musicplayer.ui
 
+import android.net.Uri
+import android.os.Environment
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -14,13 +18,14 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -28,17 +33,15 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.tasirin.musicplayer.LibraryViewModel
 import com.tasirin.musicplayer.MusicCore
+import java.io.File
 
-/** Pengaturan: folder musik, tema, izin, dan tentang. */
+/** Pengaturan: pilih folder musik (picker sistem), tema, izin, dan tentang. */
 @Composable
 fun SettingsScreen(
     vm: LibraryViewModel,
@@ -51,7 +54,17 @@ fun SettingsScreen(
     val scanning by vm.scanning.collectAsState()
     val status by vm.status.collectAsState()
     val tracks by vm.tracks.collectAsState()
-    var folderInput by remember { mutableStateOf(folder) }
+
+    val folderLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocumentTree()
+    ) { uri ->
+        val path = uri?.let { resolveTreeUriToPath(it) }
+        if (path != null) {
+            vm.scan(path)
+        } else {
+            vm.setStatus("Folder tidak bisa diakses — pilih folder lain")
+        }
+    }
 
     Column(
         Modifier
@@ -83,17 +96,41 @@ fun SettingsScreen(
             }
             Spacer(Modifier.height(10.dp))
         }
-        OutlinedTextField(
-            value = folderInput,
-            onValueChange = { folderInput = it },
-            label = { Text("Folder musik") },
-            singleLine = true,
+        Surface(
             shape = RoundedCornerShape(14.dp),
-            modifier = Modifier.fillMaxWidth()
-        )
+            color = MaterialTheme.colorScheme.surfaceVariant,
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { folderLauncher.launch(null) }
+        ) {
+            Row(
+                Modifier.padding(14.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    Icons.Filled.FolderOpen, null,
+                    tint = MaterialTheme.colorScheme.primary
+                )
+                Spacer(Modifier.width(12.dp))
+                Column(Modifier.weight(1f)) {
+                    Text("Folder musik", style = MaterialTheme.typography.bodyMedium)
+                    Text(
+                        folder,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+                Icon(
+                    Icons.Filled.ChevronRight, null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
         Spacer(Modifier.height(10.dp))
         Button(
-            onClick = { vm.scan(folderInput) },
+            onClick = { vm.scan(folder) },
             enabled = !scanning,
             modifier = Modifier.fillMaxWidth()
         ) {
@@ -168,6 +205,23 @@ fun SettingsScreen(
         }
         Spacer(Modifier.height(24.dp))
     }
+}
+
+/** Konversi tree Uri (SAF) ke path filesystem: `primary:Music` → `/storage/emulated/0/Music`. */
+private fun resolveTreeUriToPath(uri: Uri): String? {
+    val last = uri.lastPathSegment ?: return null
+    val docId = Uri.decode(last) ?: return null
+    val idx = docId.indexOf(':')
+    if (idx <= 0) return null
+    val volume = docId.substring(0, idx)
+    val rel = docId.substring(idx + 1)
+    val base = if (volume == "primary") {
+        Environment.getExternalStorageDirectory().absolutePath
+    } else {
+        "/storage/$volume"
+    }
+    val path = if (rel.isEmpty()) base else "$base/$rel"
+    return path.takeIf { File(it).isDirectory }
 }
 
 @Composable

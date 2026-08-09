@@ -53,6 +53,10 @@ class LibraryViewModel(app: Application) : AndroidViewModel(app) {
         _query.value = q
     }
 
+    fun setStatus(msg: String) {
+        _status.value = msg
+    }
+
     fun setFolder(f: String) {
         _folder.value = f.trim()
         prefs.edit().putString("folder", _folder.value).apply()
