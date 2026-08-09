@@ -1,8 +1,6 @@
 package com.tasirin.musicplayer.ui
 
 import android.graphics.Bitmap
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -17,7 +15,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -35,12 +32,10 @@ import androidx.compose.material.icons.filled.RepeatOne
 import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
-import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
@@ -63,7 +58,6 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -72,12 +66,11 @@ import com.tasirin.musicplayer.ArtCache
 import com.tasirin.musicplayer.LyricsLoader
 import com.tasirin.musicplayer.PlayerController
 import com.tasirin.musicplayer.Track
-import com.tasirin.musicplayer.ui.components.Artwork
 import com.tasirin.musicplayer.ui.theme.Accent
 
-/** Layar "Sekarang Diputar" — sampul besar, lirik, kontrol, dan antrean. */
+/** Layar "Sekarang Diputar" — sampul besar, lirik, dan kontrol. */
 @Composable
-fun NowPlayingScreen(onOpenAlbum: () -> Unit) {
+fun NowPlayingScreen() {
     val track by PlayerController.currentTrack.collectAsState()
     val playing by PlayerController.playing.collectAsState()
     val pos by PlayerController.positionMs.collectAsState()
@@ -115,21 +108,9 @@ fun NowPlayingScreen(onOpenAlbum: () -> Unit) {
     }
 
     val artColor = remember(art) { art?.let { averageColor(it) } }
-    val artScale by animateFloatAsState(
-        targetValue = if (art != null) 1f else 0.94f,
-        animationSpec = tween(450),
-        label = "artScale"
-    )
-    val artAlpha by animateFloatAsState(
-        targetValue = if (art != null) 1f else 0.5f,
-        animationSpec = tween(350),
-        label = "artAlpha"
-    )
-
     val shownPos = dragPos ?: pos.toFloat()
     val maxPos = dur.coerceAtLeast(1L).toFloat()
     val qIndex = queue.indexOfFirst { it.path == current.path }
-    val remaining = if (qIndex >= 0) (queue.size - qIndex - 1).coerceAtLeast(0) else queue.size
 
     Box(Modifier.fillMaxSize().background(bg)) {
         // Latar: sampul melebar + gradasi dari warna dominan sampul
@@ -208,11 +189,6 @@ fun NowPlayingScreen(onOpenAlbum: () -> Unit) {
                             shadowElevation = 28.dp,
                             modifier = Modifier
                                 .fillMaxSize()
-                                .graphicsLayer {
-                                    alpha = artAlpha
-                                    scaleX = artScale
-                                    scaleY = artScale
-                                }
                                 .clickable { showLyrics = true }
                         ) {
                             art?.let {
@@ -288,16 +264,6 @@ fun NowPlayingScreen(onOpenAlbum: () -> Unit) {
                     modifier = Modifier.fillMaxWidth()
                 )
             }
-            if (current.album.isNotBlank()) {
-                Spacer(Modifier.height(10.dp))
-                OutlinedButton(
-                    onClick = onOpenAlbum,
-                    modifier = Modifier.align(Alignment.CenterHorizontally)
-                ) {
-                    Text("Lihat album")
-                }
-            }
-
             Spacer(Modifier.height(16.dp))
             Slider(
                 value = shownPos.coerceIn(0f, maxPos),
@@ -394,80 +360,8 @@ fun NowPlayingScreen(onOpenAlbum: () -> Unit) {
                 }
             }
 
-            // Antrean "Selanjutnya"
-            Spacer(Modifier.height(16.dp))
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    "Selanjutnya",
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.weight(1f)
-                )
-                Text(
-                    "$remaining lagu berikutnya",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = secondary
-                )
-            }
-            Spacer(Modifier.height(4.dp))
-            val start = (qIndex - 1).coerceAtLeast(0)
-            val window = queue.drop(start).take(8)
-            LazyColumn(Modifier.fillMaxWidth().weight(1f)) {
-                itemsIndexed(window) { i, t ->
-                    val abs = start + i
-                    NextRow(
-                        track = t,
-                        active = abs == qIndex,
-                        played = abs < qIndex,
-                        onClick = {
-                            val idx = queue.indexOfFirst { it.path == t.path }
-                            if (idx >= 0) PlayerController.play(queue, idx)
-                        }
-                    )
-                }
-            }
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(24.dp))
         }
-    }
-}
-
-@Composable
-private fun NextRow(track: Track, active: Boolean, played: Boolean, onClick: () -> Unit) {
-    val art by produceState<Bitmap?>(null, track.path) { value = ArtCache.load(track.path) }
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .alpha(if (played) 0.45f else 1f)
-            .clickable(onClick = onClick)
-            .padding(vertical = 6.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Artwork(art, size = 40.dp, corner = 6.dp)
-        Spacer(Modifier.width(12.dp))
-        Column(Modifier.weight(1f)) {
-            Text(
-                track.title,
-                style = if (active) MaterialTheme.typography.titleMedium else MaterialTheme.typography.bodyMedium,
-                color = if (active) Accent else MaterialTheme.colorScheme.onSurface,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            Text(
-                track.artist,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-        }
-        if (active) {
-            Icon(Icons.Filled.VolumeUp, null, tint = Accent, modifier = Modifier.size(18.dp))
-            Spacer(Modifier.width(8.dp))
-        }
-        Text(
-            track.durationLabel,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
     }
 }
 

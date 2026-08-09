@@ -65,7 +65,9 @@ fun MusicApp(vm: LibraryViewModel = viewModel()) {
             containerColor = MaterialTheme.colorScheme.background,
             bottomBar = {
                 Column {
-                    MiniPlayer(onOpen = { tab = 2; albumOpen = false; albumName = null })
+                    if (tab != 2) {
+                        MiniPlayer(onOpen = { tab = 2; albumOpen = false; albumName = null })
+                    }
                     NavigationBar(containerColor = MaterialTheme.colorScheme.surface) {
                         NavigationBarItem(
                             selected = tab == 0,
@@ -122,16 +124,7 @@ fun MusicApp(vm: LibraryViewModel = viewModel()) {
                             albumOpen = true
                         }
                     )
-                    tab == 2 -> NowPlayingScreen(
-                        onOpenAlbum = {
-                            val t = PlayerController.currentTrack.value
-                            if (t != null) {
-                                albumName = t.album
-                                albumArtist = t.artist
-                                albumOpen = true
-                            }
-                        }
-                    )
+                    tab == 2 -> NowPlayingScreen()
                     else -> SettingsScreen(
                         vm = vm,
                         themeMode = themeMode,
