@@ -7,6 +7,9 @@
         android:name="android.permission.READ_EXTERNAL_STORAGE"
         android:maxSdkVersion="32" />
 
+    <!-- Lirik online (LRCLIB) -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
     <!-- Pemutaran latar + notifikasi -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />

@@ -15,6 +15,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -29,14 +32,17 @@ import androidx.compose.material.icons.filled.RepeatOne
 import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Slider
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -56,6 +62,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.tasirin.musicplayer.ArtCache
+import com.tasirin.musicplayer.LyricsLoader
 import com.tasirin.musicplayer.PlayerController
 import com.tasirin.musicplayer.Track
 import com.tasirin.musicplayer.ui.components.Artwork
@@ -85,6 +92,19 @@ fun NowPlayingScreen(onOpenAlbum: () -> Unit) {
     if (current == null) {
         EmptyNowPlaying()
         return
+    }
+
+    var onlineLyrics by remember(current.path) { mutableStateOf<String?>(null) }
+    var lyricsLoading by remember(current.path) { mutableStateOf(false) }
+    var lyricsAttempt by remember(current.path) { mutableStateOf(0) }
+    val lyricsText = if (current.lyrics.isNotBlank()) current.lyrics else onlineLyrics
+
+    LaunchedEffect(current.path, showLyrics, lyricsAttempt) {
+        if (showLyrics && current.lyrics.isBlank() && onlineLyrics == null && !lyricsLoading) {
+            lyricsLoading = true
+            onlineLyrics = LyricsLoader.load(current)
+            lyricsLoading = false
+        }
     }
 
     val shownPos = dragPos ?: pos.toFloat()
@@ -126,7 +146,15 @@ fun NowPlayingScreen(onOpenAlbum: () -> Unit) {
 
             Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                 if (showLyrics) {
-                    LyricsCard(current.lyrics, secondary, surfaceVariant, onClose = { showLyrics = false })
+                    LyricsCard(
+                        lyrics = lyricsText,
+                        loading = lyricsLoading,
+                        positionMs = pos,
+                        onRetry = { lyricsAttempt++ },
+                        onClose = { showLyrics = false },
+                        secondary = secondary,
+                        surfaceVariant = surfaceVariant
+                    )
                 } else {
                     Surface(
                         shape = RoundedCornerShape(24.dp),
@@ -147,7 +175,7 @@ fun NowPlayingScreen(onOpenAlbum: () -> Unit) {
                     }
                 }
             }
-            if (!showLyrics && current.lyrics.isNotBlank()) {
+            if (!showLyrics) {
                 Spacer(Modifier.height(10.dp))
                 Text(
                     "Ketuk sampul untuk lirik",
@@ -349,10 +377,13 @@ private fun EmptyNowPlaying() {
 
 @Composable
 private fun LyricsCard(
-    lyrics: String,
+    lyrics: String?,
+    loading: Boolean,
+    positionMs: Long,
+    onRetry: () -> Unit,
+    onClose: () -> Unit,
     secondary: Color,
-    surfaceVariant: Color,
-    onClose: () -> Unit
+    surfaceVariant: Color
 ) {
     Surface(
         shape = RoundedCornerShape(24.dp),
@@ -368,26 +399,107 @@ private fun LyricsCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text("Lirik", style = MaterialTheme.typography.titleMedium)
-                IconButton(onClick = onClose) {
-                    Icon(Icons.Filled.Close, "Tutup", tint = secondary)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (lyrics == null && !loading) {
+                        TextButton(onClick = onRetry) {
+                            Text("Coba lagi", color = secondary)
+                        }
+                    }
+                    IconButton(onClick = onClose) {
+                        Icon(Icons.Filled.Close, "Tutup", tint = secondary)
+                    }
                 }
             }
-            if (lyrics.isBlank()) {
-                Text(
-                    "Tidak ada lirik tertanam di file ini",
+            when {
+                loading -> Box(
+                    Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
+                }
+                lyrics == null -> Text(
+                    "Lirik tidak ditemukan — coba lagi atau periksa koneksi internet",
                     style = MaterialTheme.typography.bodyMedium,
                     color = secondary
                 )
-            } else {
-                Text(
-                    lyrics,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier
-                        .weight(1f)
-                        .verticalScroll(rememberScrollState())
-                )
+                else -> {
+                    val lines = remember(lyrics) { parseLrc(lyrics) }
+                    if (lines.isEmpty()) {
+                        Text(
+                            lyrics,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier
+                                .weight(1f)
+                                .verticalScroll(rememberScrollState())
+                        )
+                    } else {
+                        SyncedLyrics(lines, positionMs)
+                    }
+                }
             }
         }
     }
+}
+
+/** Lirik sinkron ala Oto Music: baris aktif menyala, sisanya redup, auto-scroll. */
+@Composable
+private fun SyncedLyrics(lines: List<LyricLine>, positionMs: Long) {
+    val state = rememberLazyListState()
+    val index = remember(lines, positionMs) { currentLineIndex(lines, positionMs) }
+    LaunchedEffect(index) {
+        state.animateScrollToItem((index - 1).coerceAtLeast(0))
+    }
+    LazyColumn(
+        state = state,
+        modifier = Modifier.weight(1f)
+    ) {
+        itemsIndexed(lines) { i, line ->
+            Text(
+                line.text.ifBlank { "♪" },
+                style = if (i == index) MaterialTheme.typography.titleMedium
+                else MaterialTheme.typography.bodyMedium,
+                color = if (i == index) Accent else MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(vertical = 6.dp)
+            )
+        }
+    }
+}
+
+private data class LyricLine(val timeMs: Long, val text: String)
+
+private val LRC_TAG = Regex("""\[(\d{1,2}):(\d{1,2})(?:[.:](\d{1,3}))?]""")
+
+/** Parse teks LRC `[mm:ss.xx]baris`; dukung beberapa stempel waktu per baris. */
+private fun parseLrc(raw: String): List<LyricLine> {
+    val out = mutableListOf<LyricLine>()
+    raw.lineSequence().forEach { rawLine ->
+        val tags = LRC_TAG.findAll(rawLine).toList()
+        if (tags.isEmpty()) return@forEach
+        val text = rawLine.substring(tags.last().range.last + 1).trim()
+        for (m in tags) {
+            val min = m.groupValues[1].toLongOrNull() ?: continue
+            val sec = m.groupValues[2].toLongOrNull() ?: continue
+            val fracRaw = m.groupValues[3]
+            val frac = when (fracRaw.length) {
+                3 -> fracRaw.toLongOrNull() ?: 0L
+                2 -> (fracRaw.toLongOrNull() ?: 0L) * 10
+                1 -> (fracRaw.toLongOrNull() ?: 0L) * 100
+                else -> 0L
+            }
+            out.add(LyricLine(min * 60000 + sec * 1000 + frac, text))
+        }
+    }
+    return out.sortedBy { it.timeMs }
+}
+
+/** Baris lirik aktif = baris terakhir yang waktunya sudah lewat posisi saat ini. */
+private fun currentLineIndex(lines: List<LyricLine>, posMs: Long): Int {
+    var idx = 0
+    for (i in lines.indices) {
+        if (lines[i].timeMs <= posMs) idx = i else break
+    }
+    return idx
 }

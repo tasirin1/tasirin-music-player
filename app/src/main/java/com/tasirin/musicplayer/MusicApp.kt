@@ -7,6 +7,7 @@ class MusicApp : Application() {
     override fun onCreate() {
         super.onCreate()
         ArtCache.init(this)
+        LyricsLoader.init(this)
         PlayerController.attach(this)
     }
 }

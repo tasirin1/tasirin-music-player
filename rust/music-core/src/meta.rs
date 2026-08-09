@@ -27,6 +27,19 @@ fn tag_text<'a>(tag: Option<&'a lofty::tag::Tag>, f: impl Fn(&'a lofty::tag::Tag
         .unwrap_or_default()
 }
 
+/// Lirik dari semua tag yang ada (USLT/©lyr/LYRICS/Lyrics), bukan hanya tag primer.
+fn embedded_lyrics(tagged: &lofty::file::TaggedFile) -> String {
+    for tag in tagged.tags() {
+        if let Some(l) = tag.get_string(&ItemKey::Lyrics) {
+            let l = l.trim();
+            if !l.is_empty() {
+                return l.to_string();
+            }
+        }
+    }
+    String::new()
+}
+
 /// Judul cadangan dari nama file bila tag kosong.
 fn title_from_path(path: &str) -> String {
     std::path::Path::new(path)
@@ -46,11 +59,7 @@ pub fn read_meta(path: &str) -> Result<TrackMeta, String> {
     let artist = tag_text(tag, |t| t.artist());
     let album = tag_text(tag, |t| t.album());
     let genre = tag_text(tag, |t| t.genre());
-    let lyrics = tag
-        .and_then(|t| t.get_string(&ItemKey::Lyrics))
-        .map(|s| s.trim().to_string())
-        .filter(|s| !s.is_empty())
-        .unwrap_or_default();
+    let lyrics = embedded_lyrics(&tagged);
 
     Ok(TrackMeta {
         path: path.to_string(),
