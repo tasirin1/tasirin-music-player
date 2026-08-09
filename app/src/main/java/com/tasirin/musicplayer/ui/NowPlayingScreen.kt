@@ -316,15 +316,13 @@ fun NowPlayingScreen(onOpenAlbum: () -> Unit) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Text(
                     Track.formatMs(shownPos.toLong()),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = secondary,
-                    fontFeatureSettings = "tnum"
+                    style = MaterialTheme.typography.bodySmall.copy(fontFeatureSettings = "tnum"),
+                    color = secondary
                 )
                 Text(
                     "-" + Track.formatMs((dur - shownPos.toLong()).coerceAtLeast(0)),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = secondary,
-                    fontFeatureSettings = "tnum"
+                    style = MaterialTheme.typography.bodySmall.copy(fontFeatureSettings = "tnum"),
+                    color = secondary
                 )
             }
 
