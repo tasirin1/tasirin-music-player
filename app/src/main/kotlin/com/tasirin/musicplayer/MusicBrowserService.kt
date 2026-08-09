@@ -1,8 +1,8 @@
 package com.tasirin.musicplayer
 
-import android.media.browse.MediaBrowser.MediaItem
-import android.media.MediaDescription
 import android.os.Bundle
+import android.support.v4.media.MediaBrowserCompat
+import android.support.v4.media.MediaDescriptionCompat
 import androidx.media.MediaBrowserServiceCompat
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -26,17 +26,17 @@ class MusicBrowserService : MediaBrowserServiceCompat() {
     }
 
     override fun onGetRoot(
-        clientPackageName: String?,
+        clientPackageName: String,
         clientUid: Int,
         rootHints: Bundle?
-    ): MediaBrowserServiceCompat.BrowserRoot = MediaBrowserServiceCompat.BrowserRoot(ROOT_ID, null)
+    ): MediaBrowserServiceCompat.BrowserRoot? = MediaBrowserServiceCompat.BrowserRoot(ROOT_ID, null)
 
     override fun onLoadChildren(
         parentId: String,
-        result: MediaBrowserServiceCompat.Result<MutableList<MediaItem>>
+        result: MediaBrowserServiceCompat.Result<MutableList<MediaBrowserCompat.MediaItem>>
     ) {
         if (parentId != ROOT_ID) {
-            result.sendResult(emptyList())
+            result.sendResult(mutableListOf())
             return
         }
         result.detach()
@@ -47,14 +47,14 @@ class MusicBrowserService : MediaBrowserServiceCompat() {
             }
             result.sendResult(
                 tracks.mapIndexed { i, t ->
-                    MediaItem(
-                        MediaDescription.Builder()
+                    MediaBrowserCompat.MediaItem(
+                        MediaDescriptionCompat.Builder()
                             .setMediaId(t.path)
                             .setTitle(t.title)
                             .setSubtitle(t.artist.ifBlank { t.album })
                             .setDescription(t.album.ifBlank { t.artist })
                             .build(),
-                        MediaItem.FLAG_PLAYABLE
+                        MediaBrowserCompat.MediaItem.FLAG_PLAYABLE
                     )
                 }.toMutableList()
             )
