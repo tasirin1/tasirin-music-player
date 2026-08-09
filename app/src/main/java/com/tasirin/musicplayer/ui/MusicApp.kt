@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Album
 import androidx.compose.material.icons.filled.LibraryMusic
 import androidx.compose.material.icons.filled.PlayCircle
 import androidx.compose.material.icons.filled.Settings
@@ -22,7 +23,6 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -50,6 +50,8 @@ fun MusicApp(vm: LibraryViewModel = viewModel()) {
 
     var tab by rememberSaveable { mutableStateOf(0) }
     var albumOpen by rememberSaveable { mutableStateOf(false) }
+    var albumName by rememberSaveable { mutableStateOf<String?>(null) }
+    var albumArtist by rememberSaveable { mutableStateOf("") }
     val hasPermission = remember { mutableStateOf(hasAudioPermission(context)) }
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
@@ -63,23 +65,29 @@ fun MusicApp(vm: LibraryViewModel = viewModel()) {
             containerColor = MaterialTheme.colorScheme.background,
             bottomBar = {
                 Column {
-                    MiniPlayer(onOpen = { tab = 1 })
+                    MiniPlayer(onOpen = { tab = 2; albumOpen = false; albumName = null })
                     NavigationBar(containerColor = MaterialTheme.colorScheme.surface) {
                         NavigationBarItem(
                             selected = tab == 0,
-                            onClick = { tab = 0; albumOpen = false },
+                            onClick = { tab = 0; albumOpen = false; albumName = null },
                             icon = { Icon(Icons.Filled.LibraryMusic, contentDescription = null) },
                             label = { Text("Perpustakaan") }
                         )
                         NavigationBarItem(
                             selected = tab == 1,
-                            onClick = { tab = 1 },
+                            onClick = { tab = 1; albumOpen = false; albumName = null },
+                            icon = { Icon(Icons.Filled.Album, contentDescription = null) },
+                            label = { Text("Album") }
+                        )
+                        NavigationBarItem(
+                            selected = tab == 2,
+                            onClick = { tab = 2; albumOpen = false; albumName = null },
                             icon = { Icon(Icons.Filled.PlayCircle, contentDescription = null) },
                             label = { Text("Sekarang") }
                         )
                         NavigationBarItem(
-                            selected = tab == 2,
-                            onClick = { tab = 2 },
+                            selected = tab == 3,
+                            onClick = { tab = 3; albumOpen = false; albumName = null },
                             icon = { Icon(Icons.Filled.Settings, contentDescription = null) },
                             label = { Text("Pengaturan") }
                         )
@@ -88,31 +96,42 @@ fun MusicApp(vm: LibraryViewModel = viewModel()) {
             }
         ) { padding ->
             Box(Modifier.padding(padding).fillMaxSize()) {
-                when (tab) {
-                    0 -> LibraryScreen(
+                val album = albumName
+                when {
+                    albumOpen && album != null -> AlbumScreen(
+                        vm = vm,
+                        album = album,
+                        artist = albumArtist,
+                        onBack = { albumOpen = false; albumName = null },
+                        onPlay = { list, i ->
+                            PlayerController.play(list, i)
+                        }
+                    )
+                    tab == 0 -> LibraryScreen(
                         vm = vm,
                         onPlay = { list, i ->
                             PlayerController.play(list, i)
-                            tab = 1
+                            tab = 2
                         }
                     )
-                    1 -> {
-                        val track = PlayerController.currentTrack.collectAsState().value
-                        val current = track
-                        if (albumOpen && current != null) {
-                            AlbumScreen(
-                                vm = vm,
-                                album = current.album,
-                                artist = current.artist,
-                                onBack = { albumOpen = false },
-                                onPlay = { list, i ->
-                                    PlayerController.play(list, i)
-                                }
-                            )
-                        } else {
-                            NowPlayingScreen(onOpenAlbum = { albumOpen = true })
+                    tab == 1 -> AlbumsScreen(
+                        vm = vm,
+                        onOpenAlbum = { a, ar ->
+                            albumName = a
+                            albumArtist = ar
+                            albumOpen = true
                         }
-                    }
+                    )
+                    tab == 2 -> NowPlayingScreen(
+                        onOpenAlbum = {
+                            val t = PlayerController.currentTrack.value
+                            if (t != null) {
+                                albumName = t.album
+                                albumArtist = t.artist
+                                albumOpen = true
+                            }
+                        }
+                    )
                     else -> SettingsScreen(
                         vm = vm,
                         themeMode = themeMode,

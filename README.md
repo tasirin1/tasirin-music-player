@@ -6,9 +6,12 @@ iklan.
 
 ## Fitur
 
-- 🎨 **Tampilan ala Apple Music**: perpustakaan dengan pencarian, layar
-  "Sekarang Diputar" dengan sampul besar + latar berwarna, mini player, dan
-  daftar "Selanjutnya".
+- 🎨 **Tampilan ala Apple Music**: perpustakaan dengan pencarian, tab Album
+  (kisi album), layar "Sekarang Diputar" dengan sampul besar + latar berwarna,
+  mini player, dan daftar "Selanjutnya".
+- 🎤 **Lirik ala Oto Music**: ketuk sampul untuk lirik — lirik tertanam
+  (USLT/LRC) tampil sinkron dengan highlight baris aktif, atau dicari online
+  lewat LRCLIB bila tidak tertanam.
 - 📁 **Pilih folder lewat picker sistem** (SAF): tekan "Folder musik" di
   Pengaturan, pilih folder lewat dialog sistem, lalu otomatis dipindai.
 - 🦀 **Inti Rust** (`libmusiccore.so` via JNI): pemindaian pustaka paralel dan
